@@ -9,20 +9,23 @@
 </head>
 
 <body>
-    <h1>Архив метеослужбы</h1>
+    <h1 class="header">Архив метеослужбы</h1>
     <div class="flex-container">
         <nav>
             <ul>
             </ul>
+            <a href="#" onclick="Data.cleanUpIDBs()">
+                cleanUpIDBs
+            </a>
+            <a href="/">clear hash</a>
         </nav>
         <main>
-            <form name="period">
-                <input type="number" name="start">
-                <input type="number" name="end">
-            </form>
         </main>
     </div>
     <!-- inject:js -->
     <!-- endinject -->
+    <script>
+        init();
+    </script>
 </body>
 </html>

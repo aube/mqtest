@@ -1,11 +1,5 @@
 
-    document.getElementById('temperature-trigger');
-    document.getElementById('precipitation-trigger');
-
-    // var canvas = document.querySelector("#chart");
-
-
-    var CHARTS = [{
+    var Charts = [{
             id: 'temperature',
             dataSource: '/temperature.json',
             title: 'Температура'
@@ -14,181 +8,271 @@
             dataSource: '/precipitation.json',
             title: 'Осадки'
         }],
-        hash = window.location.hash.substr(1).split(','),
-        activeChart = hash[0] || CHARTS[0].id,
+        // hash = window.location.hash.substr(1).split(','),
+        // activeChart = hash[0] || CHARTS[0].id,
         MIN_YEAR = 1881,
         MAX_YEAR = 2006;
 
 
-
-    var period = {
-        start: new Input('start'),
-        end: new Input('end')
-    }
-
-    function Input(name) {
-        var _t = this,
-            input = document.forms.period[name];
-
-        this.set = function(value) {
-            if (!+value) {
-                return;
-            }
-            _t.value = +value;
-            input.value = +value;
-        }
-
+    var hash = new function() {
         this.update = function() {
-            _t.set(input.value);
+            var _chart = tabs.active.chart;
+            this.chart = _chart.id;
+            this.from = _chart.ctrl.period.from;
+            this.to = _chart.ctrl.period.to;
 
-            if (name === 'start' && input.value > period.end.value) {
-                period.end.set(input.value);
-            }
-            if (name === 'end' && input.value < period.start.value) {
-                period.start.set(input.value);
-            }
-
-            hash[1] = period.start.value;
-            hash[2] = period.end.value;
-            window.location.hash = hash.join();
-            chartDataUpdate();
+            location.hash = [this.chart, this.from, this.to].filter(function(v) {
+                return !!v
+            }).join(',');
         }
 
-        this.init = function(value) {
-            _t.value = value;
-            input.value = value;
-            input.addEventListener('keyup', period[name].update);
-            input.addEventListener('change', period[name].update);
-            input.addEventListener('click', period[name].update);
+        let _h = location.hash.substr(1).split(',');
+        this.chart = _h[0];
+        this.from = _h[1];
+        this.to = _h[2] || _h[1];
+    }
+
+
+    var tabs = {
+        map: {},
+
+        onActivate: setActiveChart,
+
+        active: '',
+
+        setActive: function(id) {
+            if (tabs.active) {
+                tabs.active.tab.classList.remove('active');
+                tabs.active.content.classList.remove('active');
+            }
+            tabs.map[id].tab.classList.add('active');
+            tabs.map[id].content.classList.add('active');
+            tabs.active = tabs.map[id];
+            if (tabs.onActivate) {
+                tabs.onActivate.apply(tabs.map[id].chart);
+            }
+            hash.update();
+        },
+
+        create: function(chart) {
+            var tab = utils.crEl('li', 'nav > ul');
+
+            chart.container = utils.crEl('div', 'main', {class: 'chart-container'});
+
+            tabs.map[chart.id] = {
+                tab: tab,
+                content: chart.container,
+                chart: chart
+            }
+
+            tab.innerText = chart.title;
+
+            tab.addEventListener('click', function() {
+                tabs.setActive(chart.id);
+            });
+
+            return tab;
         }
     }
 
-    function chartDataUpdate(chart) {
-        chart = chart || getActiveChart() || this;
 
-        var params = {
-            url: chart.dataSource,
-            start: period.start.value + '-01-01',
-            end: period.end.value + '-12-31'
-        }
 
-        Data.get(params, function(data) {
-            chart.data = data;
+        // var html = '<input '
+        // chartContainer.insertAdjacentHTML('afterbegin', html);
 
-            chart.ctrl.render(chart.data);
-            // document.forms.period.start.value = startyear;
-        });
-    }
+        // chart.ctrl = new Chart(chart.canvas);
+        // chart.rect = chart.canvas.getBoundingClientRect();
 
     function getActiveChart() {
-        return CHARTS.filter(function(chart) {
+        return Charts.filter(function(chart) {
             return chart.active;
         })[0];
     }
 
     function setActiveChart() {
-        var chart = this,
-            _ac = getActiveChart();
+        var chart = this;
 
-        hash[0] = chart.id;
-        window.location.hash = hash.join();
-
-        if (_ac) {
-            _ac.trigger.classList.remove('active');
-            _ac.canvas.classList.remove('active');
-            _ac.active = false;
+        //first load
+        //container class '.loadind' should be set for content size calc on activation
+        if (!chart.ctrl) {
+            chart.container.classList.add('loading')
+            chart.ctrl = new Chart(chart.container, chart);
+            chart.container.classList.remove('loading')
         }
 
-        chart.trigger.classList.add('active');
-        chart.canvas.classList.add('active');
-        chart.active = true;
 
-        chart.ctrl.resize();
 
-        if (!chart.data) {
-            chartDataUpdate(chart);
-            // Data.get(chart.dataSource, function() {
-            //     chart.data = this.data;
-            //     chart.min = +chart.data[0].t.substr(0, 4);
-            //     chart.max = +chart.data[chart.data.length - 1].t.substr(0, 4);
+        // hash[0] = chart.id;
+        // window.location.hash = hash.join();
 
-            //     chart.ctrl.render(chart.data);
-            //     // document.forms.period.start.value = startyear;
-            // });
-        } else {
-            chart.ctrl.render(chart.data);
-        }
+        // chart.ctrl.resize();
 
-        console.log('',document.forms.period.start);
+        // if (!chart.data) {
+        //     chartDataUpdate(chart);
+        // } else {
+        //     chart.ctrl.render(chart.data);
+        // }
+
+        // console.log('',document.forms.period.start);
     }
 
 
     function init() {
-        var menu = document.querySelector("nav > ul"),
-            main = document.querySelector("main");
 
-        period.start.init(hash[1] || MIN_YEAR);
-        period.end.init(hash[2] || MAX_YEAR);
+        // period.start.init(hash[1] || MIN_YEAR);
+        // period.end.init(hash[2] || MAX_YEAR);
 
-        CHARTS.map(function(chart) {
+        Charts.map(function(chart) {
 
-            chart.trigger = document.createElement('li');
-            chart.trigger.innerText = chart.title;
-            menu.appendChild(chart.trigger);
-            chart.trigger.addEventListener('click', function() {
-                setActiveChart.call(chart);
-            });
+            var tab = tabs.create(chart);
 
-            chart.canvas = document.createElement('canvas');
-            main.appendChild(chart.canvas);
-            chart.ctrl = new Chart(chart.canvas);
+            // chart.ctrl = new Chart(chart.canvas);
             // chart.rect = chart.canvas.getBoundingClientRect();
 
-            if (activeChart === chart.id) {
-                chart.active = true;
-                setActiveChart.call(chart);
-            }
+            // if (activeChart === chart.id) {
+            //     chart.active = true;
+            //     // setActiveChart.call(chart);
+            // }
 
-            chart.canvas.onmousemove = function(e) {
-                // important: correct mouse position:
-                var x = e.clientX - chart.ctrl.rect.left,
-                    y = e.clientY - chart.ctrl.rect.top;
+            // chart.canvas.onmousemove = function(e) {
+            //     // important: correct mouse position:
+            //     var x = e.clientX - chart.ctrl.rect.left,
+            //         y = e.clientY - chart.ctrl.rect.top;
 
-                let res = chart.ctrl.getByPoint(x, y);
-                // console.log('res',res);
-                // ctx.clearRect(0, 0, canvas.width, canvas.height); // for demo
+            //     let res = chart.ctrl.getByPoint(x, y);
+            //     // console.log('res',res);
+            //     // ctx.clearRect(0, 0, canvas.width, canvas.height); // for demo
 
-                // while(r = rects[i++]) {
-                //     // add a single rect to path:
-                //     ctx.beginPath();
-                //     ctx.rect(r.x, r.y, r.w, r.h);
+            //     // while(r = rects[i++]) {
+            //     //     // add a single rect to path:
+            //     //     ctx.beginPath();
+            //     //     ctx.rect(r.x, r.y, r.w, r.h);
                     
-                //     // check if we hover it, fill red, if not fill it blue
-                //     ctx.fillStyle = ctx.isPointInPath(x, y) ? "red" : "blue";
-                //     ctx.fill();
-                // }
-            };
+            //     //     // check if we hover it, fill red, if not fill it blue
+            //     //     ctx.fillStyle = ctx.isPointInPath(x, y) ? "red" : "blue";
+            //     //     ctx.fill();
+            //     // }
+            // };
 
         });
 
-        window.addEventListener('resize', function() {
-            getActiveChart().ctrl.render();
-        });
+        tabs.setActive(hash.chart || Charts[0].id);
+
+        // window.addEventListener('resize', function() {
+        //     getActiveChart().ctrl.render();
+        // });
 
 
     }
 
-init();
 
-    // var rects = [
-    //             {x: 10, y: 10, w: 200, h: 50},
-    //             {x: 50, y: 70, w: 150, h: 30}        // etc.
-    //     ], i = 0, r;
 
-    // // render initial rects.
-    // while(r = rects[i++]) {
-    //     ctx.rect(r.x, r.y, r.w, r.h);
-    // }
-    // ctx.fillStyle = "blue";
-    // ctx.fill();
 
+
+utils = {
+    crEl: function(name, container, attributes) {
+        if (typeof container === 'string') {
+            container = document.querySelector(container);
+        }
+        var el = document.createElement(name);
+        container.appendChild(el);
+        if (attributes) {
+            for (var a in attributes) {
+                el.setAttribute(a, attributes[a]);
+            }
+        }
+        return el;
+    },
+
+    ym: function(dateString) {
+        return dateString.substr(0, 7);
+    },
+
+    copyObj: function (o) {
+        if (!o || typeof o !== 'object')
+            return o;
+
+        var d = o instanceof Array ? [] : Object.create(Object.getPrototypeOf(o)),
+            keys = Object.getOwnPropertyNames(o);
+
+        for (var i = 0, n = keys.length; i < n; ++i) {
+            var key = keys[i];
+            Object.defineProperty(d, key, Object.getOwnPropertyDescriptor(o, key));
+        }
+
+        return d;
+    },
+
+    daysBetween: function(d0, d1) {
+        d0 = d0.split('-');
+        d1 = d1.split('-');
+        var days = (d0[0] - d1[0]) * 365.242199 + 
+            (d0[1] - d1[1]) * 30.4368499 + 
+            (d0[2] - d1[2]);
+        return Math.round(days);
+    },
+
+
+    /**
+     * Simple [key:value] storage with defined values lifetime
+     *
+     * @param {String} key
+     * @param {something} value
+     * @param {Number} lifetime in ms
+     */
+    cache: (function() {
+        var storage = {};
+
+        return function(key, value, lifetime) {
+            if (arguments.length === 1) {
+                return storage[key];
+            }
+
+            lifetime = lifetime || 1e5;
+            storage[key] = value;
+
+            if (lifetime > 0) {
+                setTimeout(function() {
+                    delete storage[key];
+                }, lifetime)
+            }
+        }
+    })(),
+
+    /**
+     * XMLHttpRequest
+     *
+     * @param {Object} params {url: '', from: '', to: ''}
+     * @param {Function} cb
+     */
+    xhr: function(params, cb) {
+        var url = params.url,
+            query = [];
+
+        for (var key in params) {
+            if (key !== 'url') {
+                query.push(key + '=' + params[key]);
+            }
+        }
+
+        if (query.length) {
+            url += '?' + query.join('&');
+        }
+
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (this.readyState === 4) {
+                if (this.status === 200) {
+                    this.data = JSON.parse(this.responseText);
+                    utils.cache(url, this.data);
+                    cb.call(this, this.data);
+                } else {
+                    //throw error
+                }
+            }
+        };
+        xhttp.open("GET", url, true);
+        xhttp.send();
+    }
+
+}

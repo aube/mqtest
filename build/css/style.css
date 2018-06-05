@@ -1,19 +1,31 @@
 body {
   margin: 0;
-  padding: 0;
+  padding: 0 1rem;
   height: 100vh; }
 
 .flex-container {
-  padding: 0 2rem; }
-  @media only screen and (min-width: 567px) {
+  height: -webkit-calc(100vh - 5rem);
+  height: calc(100vh - 5rem);
+  -webkit-box-align: stretch;
+      -ms-flex-align: stretch;
+          align-items: stretch;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex; }
+  @media only screen and (max-width: 566px) {
     .flex-container {
-      display: -webkit-box;
-      display: -ms-flexbox;
-      display: flex; } }
+      -webkit-box-orient: vertical;
+      -webkit-box-direction: normal;
+          -ms-flex-direction: column;
+              flex-direction: column; } }
 
-h1 {
+.header {
   margin: 0;
-  padding: 2rem; }
+  height: 5rem;
+  background: #fff; }
+  @media only screen and (min-width: 567px) {
+    .header {
+      line-height: 5rem; } }
 
 nav {
   max-width: 20rem;
@@ -38,17 +50,23 @@ nav {
       width: 100%; } }
 
 main {
-  width: 100%; }
-  main input {
-    font-size: 1.6rem;
-    width: 5rem;
-    display: inline-block; }
-
-canvas {
+  background: #aaa;
   width: 100%;
-  display: none; }
-  canvas.active {
-    display: block; }
-  canvas.loading {
-    opacity: 0;
-    display: block; }
+  height: 100%; }
+  main .chart-container {
+    height: 100%;
+    width: 100%;
+    display: none; }
+    main .chart-container .chart-contols input {
+      font-size: 1.6rem;
+      width: 5rem;
+      display: inline-block; }
+    main .chart-container canvas {
+      height: 100%;
+      width: 100%;
+      background-color: #fafafa; }
+    main .chart-container.active {
+      display: block; }
+    main .chart-container.loading {
+      opacity: 0;
+      display: block; }
