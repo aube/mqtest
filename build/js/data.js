@@ -243,13 +243,14 @@ var IDB = function(dbName, storeName) {
 
         for (var i = startingPosition; i < data.length; i++) {
             objectStore.put(data[i]);
+
+            //partial execution for defreeze ui
             if (i && i % 100 === 0) {
                 args[2] = i + 1;
                 return setTimeout(function() {
                     self.insert.apply(self, args);
                 }, 10);
             }
-            
         }
 
         transaction.oncomplete = completedFn;
@@ -289,7 +290,8 @@ var IDB = function(dbName, storeName) {
 
         objectStore.openCursor(keyRangeValue).onsuccess = function(event) {
             var cursor = event.target.result;
-            if (params.quantity && counter++ == params.quantity || !cursor) {
+            if (params.quantity && counter++ >= params.quantity || !cursor) {
+                streamFn('done');
                 completedFn(dataWasSended ? 'done' : null);
                 return;
             } else {

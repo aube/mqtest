@@ -14,102 +14,63 @@
  * @param {String} [sep='-']
  * @returns {String}
  */
-function ChartLine(canvas) {
+function ChartLine(canvas, params) {
 
     var self = this,
-        ctx = canvas.getContext("2d"),
-        _data,
-        options = {
-            noScroll: true,
-            yAxisPx: 100,
-            xAxisPx: 100,
-        },
-        //calcs on init
-        params = {
-            width: 0,
-            height: 0,
-            minDate: 0,
-            maxDate: 3000
-        };
+        ctx = canvas.getContext("2d");
 
-    ctx.lineJoin = 'round';
+    this.chart = params.chart;
     this.dataUpdated = false;
 
-    this.resize = function() {
-
-        this.rect = canvas.getBoundingClientRect();
-
-        self.width = canvas.offsetWidth;
-        self.height = canvas.offsetHeight;
-        // height = document.body.clientHeight - this.rect.top;
-        // height = Math.min(canvas.offsetWidth / 16 * 9, height);
-
-        canvas.setAttribute('width', parseInt(self.width));
-        canvas.setAttribute('height', parseInt(self.height));
-
+    function posY(value) {
+        var rate = params.height / (self.data.maxValue - self.data.minValue);
+        return params.height + params.margin[0] - (+value - self.data.minValue) * rate;
     }
 
+    function posX(value) {
+        var m = params.margin[3],
+            rate = 1,
+            points = self.data.array.length,
+            pointWidth = params.pointWidth || 1;
 
-    function drawYAxis() {
-
-    }
-
-    function y(value, delta, pixInVal) {
-        return self.height - (+value + delta) * pixInVal;
-    }
-
-    this.cleanup = function() {
-        // Store the current transformation matrix
-        ctx.save();
-        // Use the identity matrix while clearing the canvas
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        // Restore the transform
-        ctx.restore();
-    }
-
-    this.render = function() {
-        var data = this.data;
-        ctx.beginPath();
-
-        //Y-scale
-        let min = Infinity,
-            max = -Infinity;
-
-        for (var i = this.data.length - 1; i >= 0; i--) {
-            min = Math.min(min, +this.data[i].v);
-            max = Math.max(max, +this.data[i].v);
+        if (params.fitByWidth) {
+            rate = Math.max(1, params.width / pointWidth / points);
         }
 
-        this.delta = 0 - min;
-        this.pixInVal = self.height / (max - min);
+        return value * rate * pointWidth + m;
+    }
 
-        this.cleanup();
-        ctx.moveTo(0, y(this.data[0].v, this.delta, this.pixInVal));
+    this.render = function(done) {
 
-        for (var i = 1; i < this.data.length; i++) {
-            ctx.lineTo(i, y(this.data[i].v, this.delta, this.pixInVal));
+        var data = this.data.array,
+            x, y;
+
+        if (!data.length) {
+            return;
+        }
+
+        ctx.strokeStyle = params.lineColor;
+
+        ctx.beginPath();
+        ctx.lineWidth = 1;
+        ctx.lineJoin = 'round';
+
+        y = posY(data[0].v);
+        x = posX(0);
+        ctx.moveTo(x, y);
+        for (var i = 1; i < data.length; i++) {
+            y = posY(data[i].v);
+            x = posX(i);
+            ctx.lineTo(x, y);
         }
         ctx.stroke();
         self.dataUpdated = false;
     }
 
-    this.loop = function()
-    {
-        if (self.dataUpdated) {
-            self.cleanup();
-            self.render();
-        }
-        
-        requestAnimationFrame(self.loop);
-    }
-    this.loop();
 
     this.getByPoint = function(x, y) {
         return this.data && this.data[~~x];
     }
-
-    this.resize(canvas);
 
 }
 
