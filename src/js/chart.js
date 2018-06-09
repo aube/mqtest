@@ -3,7 +3,10 @@
 
 function Chart(container, options) {
 
-
+    var positionX = 0,
+        quantityX = 1,
+        fullQuantityX = 1,
+        dataState = '';
 
     this.min = 0;
     this.max = 3000;
@@ -18,6 +21,7 @@ function Chart(container, options) {
 
     var self = this,
         data = [],
+        fullData = [],
         width,
         height,
         // options = {
@@ -32,55 +36,116 @@ function Chart(container, options) {
             minDate: 0,
             maxDate: 3000,
             padding: [50, 50, 50, 50], //top, right, bottom, left
+            fitByWidth: true,
+            pointWidth: 1,
             scales: {
+                fn: ChartScales,
+                renderOn: 'visible',
                 axisY: true,
                 axisX: 0,
-                linesY: 10,
-                lineColor: '#ccc'
+                axisXHeight: 50,
+                linesY: 10, //step
+                linesX: true,
+                lineColor: '#ccc',
+                textColor: '#333'
             },
             chart: {
-                lineColor: '#333',
-                fitByWidth: true,
-                pointWidth: 1
+                fn: ChartLine,
+                rect: [0, 0, .2, 0],
+                renderOn: 'visible',
+                lineColor: '#333'
+            },
+            map: {
+                fn: ChartMap,
+                rect: [.85, 0, 0, 0],
+                fullData: true,
+                lineColor: '#666',
+                borderColor: '#ccc',
+                selectionColor: '#ffdd88',
+                position: 'after', //'after' || 'before', default is 'after'
+                height: 20 //percents
             }
         };
-
-    params.chart.margin = [
-        params.padding[0],
-        params.padding[1],
-        params.padding[2],
-        params.padding[3]
-    ]
 
 
     var controls = utils.crEl('div', container, {class: 'chart-controls'}),
         canvas = utils.crEl('canvas', container, {class: 'chart'}),
         inputFrom = new Input('from'),
         inputTo = new Input('to'),
-        chartModules = [];
+        activeModules = [];
 
+
+    function calculatePositionAndSizes(name) {
+        var p = params.padding,
+            pn = params[name],
+            pos = 0;
+
+        pn.padding = utils.copyObj(p);
+
+        pn.height = canvas.height;
+        pn.width = canvas.width;
+
+        for (var pos = 0; pos < 4; pos++) {
+            if (!pn.rect || !pn.rect[pos]) {
+                continue;
+            }
+
+            if (+pn.rect[pos] >= 1) {
+                pn.padding[pos] = +pn.rect[pos];
+            //percents:
+            } else if (pos % 2 === 0) {
+                pn.padding[pos] = Math.round(+pn.rect[pos] * pn.height);
+            } else {
+                pn.padding[pos] = Math.round(+pn.rect[pos] * pn.width);
+            }
+            pn.padding[pos] = Math.max(pn.padding[pos], p[pos]);
+        };
+
+        pn.height = pn.height - pn.padding[0] - pn.padding[2];
+        pn.width = pn.width - pn.padding[1] - pn.padding[3];
+
+        if (name == 'chart') {
+            quantityX = pn.width;
+        }
+    }
 
     function resize() {
+        let p = params.padding,
+            pc = params.chart.padding;
 
         self.width = canvas.offsetWidth;
         self.height = canvas.offsetHeight;
-        // canvas.rect = canvas.getBoundingClientRect();
-        // height = document.body.clientHeight - canvas.rect.top;
-        // height = Math.min(canvas.offsetWidth / 16 * 9, height);
 
         canvas.setAttribute('width', parseInt(self.width));
         canvas.setAttribute('height', parseInt(self.height));
         canvas.style.width = parseInt(self.width) + 'px';
         canvas.style.height = parseInt(self.height) + 'px';
 
-        params.chart.width = canvas.width - params.chart.margin[1] - params.chart.margin[3];
-        params.chart.height = canvas.height - params.chart.margin[0] - params.chart.margin[2];
-
+        getAllModules().map(calculatePositionAndSizes);
     }
-    resize();
-    chartModules.push(new ChartScales(canvas, params));
-    chartModules.push(new ChartLine(canvas, params.chart));
 
+    function getAllModules() {
+        var modules = [];
+        for (let name in params) {
+            if (params[name].fn) {
+                modules.push(name);
+            }
+        }
+        return modules;
+    }
+
+    function addModules() {
+        getAllModules().map(function(name) {
+            let mdl = new params[name].fn(canvas, params);
+            for (let p in params[name]) {
+                if (p === 'fn') {
+                    continue;
+                }
+                mdl[p] = params[name][p];
+            }
+            activeModules.push(mdl);
+        });
+    }
 
     function Input(name) {
         var input = utils.crEl('input', controls, {
@@ -115,20 +180,19 @@ function Chart(container, options) {
 
 
     function dataCompression(averaging) {
-
-        if (canvas.width >= data.length) {
+        if (quantityX >= fullQuantityX) {
             return data;
         }
 
         let _data = [],
-            q = data.length / canvas.width;
+            rate = fullQuantityX / quantityX;
 
-        for (let i = 0; i < canvas.width; i++) {
-            let d = Math.min(Math.round(i * q), data.length - 1);
+        for (let i = 0; i < quantityX; i++) {
+            let d = Math.min(Math.round(i * rate), fullQuantityX - 1);
 
             if (averaging) {
                 let avr = 0,
-                    dd = Math.min(Math.round((i + 1) * q), data.length - 1);
+                    dd = Math.min(Math.round((i + 1) * rate), fullQuantityX - 1);
 
                 for (let a = d; a <= dd; a++) {
                     avr += +data[a].v;
@@ -144,22 +208,55 @@ function Chart(container, options) {
         return _data;
     }
 
-    function setDataToChartModules(data, done) {
-        let _data = dataCompression(1),
-            _min = Infinity,
-            _max = -Infinity;
+    function getMinMaxValues(data) {
+        let min = Infinity,
+            max = -Infinity;
 
-        for (var i = _data.length - 1; i >= 0; i--) {
-            _min = Math.min(_min, +_data[i].v);
-            _max = Math.max(_max, +_data[i].v);
+        //min/max update for compressed data
+        for (var i = data.length - 1; i >= 0; i--) {
+            min = Math.min(min, +data[i].v);
+            max = Math.max(max, +data[i].v);
         }
 
-        cleanup();
+        return {
+            min: min,
+            max: max
+        }
+    }
 
-        chartModules.map(function(module) {
-            module.data = {array: _data, minValue: _min, maxValue: _max};
-            // module.cleanup();
-            module.render(done);
+
+    function renderModules() {
+        let _data = data.slice(positionX, positionX + quantityX),
+            rateX = 1,
+            minMaxValues = getMinMaxValues(_data);
+
+        if (params.fitByWidth) {
+            rateX = Math.max(1, params.chart.width / params.pointWidth / _data.length);
+        }
+
+        if (dataState !== 'invisible') {
+            cleanup();
+        }
+
+        activeModules.map(function(mdl) {
+            if (dataState === 'done' || mdl.renderOn === dataState || !mdl.renderOn) {
+                if (mdl.fullData) {
+                    mdl.data = dataCompression(mdl.avaraging);
+                    let mmv = getMinMaxValues(mdl.data)
+                    mdl.minValue = mmv.min;
+                    mdl.maxValue = mmv.max;
+                } else {
+                    mdl.data = _data;
+                    mdl.minValue = minMaxValues.min;
+                    mdl.maxValue = minMaxValues.max;
+                }
+                mdl.rateX = rateX;
+                mdl.dataState = dataState;
+                mdl.positionX = positionX;
+                mdl.quantityX = quantityX;
+                mdl.fullQuantityX  = fullQuantityX;
+                mdl.render(dataState);
+            }
         });
         
     }
@@ -172,8 +269,18 @@ function Chart(container, options) {
         ctx.restore();
     }
 
-    function dataUpdate() {
 
+    function moveChart(shift) {
+        if (dataState !== 'done') return;
+        shift = shift || 100;
+        positionX = Math.max(positionX + shift, 0);
+        positionX = Math.min(positionX, fullQuantityX - quantityX);
+        renderModules();
+    }
+
+    // setInterval(moveChart, 555);
+
+    function dataUpdate() {
         data = [];
         if (self.period.from > self.period.to) {
             return;
@@ -181,20 +288,24 @@ function Chart(container, options) {
 
         var _params = {
             url: options.dataSource,
-            quantity: params.chart.width
+            quantity: quantityX,
+
+            from: (self.period.from || 1881) + '-01-01',
+            to: (self.period.to || 1890) + '-12-31'
         }
 
-        if (self.period.from && self.period.to) {
-            _params.from = self.period.from + '-01-01';
-            _params.to = self.period.to + '-12-31';
-        }
+        // if (self.period.from && self.period.to) {
+        //     _params.from = self.period.from + '-01-01';
+        //     _params.to = self.period.to + '-12-31';
+        // }
 
-        var dataLoaded = 0;
+        dataState = '';
 
-        console.log('_params',_params);
+        // console.log('_params',_params);
 
         Data.get(_params, function(d) {
-            if (dataLoaded) return;
+            // if (dataState == 'done') return;
+
             if (d.stream) {
                 data.push(d.stream);
                 // inputTo.el.value = ('' + d.stream.t).substr(0, 4)
@@ -205,30 +316,40 @@ function Chart(container, options) {
             // console.log('data',data);
             // chart.data = data;
 
-            if (!self.period.from) {
-                let t = '' + data[0].t;
-                inputFrom.value = t.substr(0, 4)
-            }
-            if (!self.period.to) {
-                let t = '' + data.slice(-1)[0].t;
-                inputTo.value = t.substr(0, 4)
-            }
+            // if (!self.period.from) {
+            //     let t = '' + data[0].t;
+            //     inputFrom.value = t.substr(0, 4)
+            // }
+            // if (!self.period.to) {
+            //     let t = '' + data.slice(-1)[0].t;
+            //     inputTo.value = t.substr(0, 4)
+            // }
 
             if (d === 'done') {
-                setDataToChartModules(data, true);
-                dataLoaded = 1;
+                dataState = 'done';
+                fullQuantityX = data.length;
             } else {
-                requestAnimationFrame(function() {
-                    setDataToChartModules(data, dataLoaded);
-                });
+                dataState = params.chart.width ? 'visible' : 'invisible';
             }
+
+            // if (dataState === 'done') {
+            //     renderModules();
+            // } else {
+                requestAnimationFrame(function() {
+                    renderModules();
+                });
+            // }
 
             // document.forms.period.from = startyear;
         });
     }
 
+    (function init() {
 
-    dataUpdate();
+        resize();
+        addModules();
+        dataUpdate();
+    })();
 
 
 

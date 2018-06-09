@@ -19,21 +19,22 @@ function ChartScales(canvas, params) {
     var self = this,
         ctx = canvas.getContext("2d");
 
-    this.scales = params.scales;
+    
+
     this.chart = params.chart;
-    this.dataUpdated = false;
+
 
     ctx.lineJoin = 'round';
 
     function posY(value) {
-        var rate = self.chart.height / (self.data.maxValue - self.data.minValue);
-        return self.chart.height + self.chart.margin[0] - (+value - self.data.minValue) * rate;
+        var rate = self.chart.height / (self.maxValue - self.minValue);
+        return self.chart.height + self.padding[0] - (+value - self.minValue) * rate;
     }
 
     function drawX() {
-        var x0 = params.padding[3],
-            x1 = canvas.width - params.padding[1],
-            y = params.scales.axisX !== true ? posY(params.scales.axisX) : canvas.height - params.padding[2];
+        var x0 = self.padding[3],
+            x1 = self.width + self.padding[3],
+            y = self.axisX !== true ? posY(self.axisX) : self.height - self.padding[2];
 
         ctx.beginPath();
         ctx.lineWidth = 1;
@@ -43,9 +44,9 @@ function ChartScales(canvas, params) {
     }
 
     function drawY() {
-        var y0 = params.padding[0],
-            y1 = canvas.height - params.padding[2],
-            x = params.padding[3];
+        var y0 = self.padding[0],
+            y1 = self.chart.height + y0,
+            x = self.padding[3];
         ctx.beginPath();
         ctx.lineWidth = 1;
         ctx.moveTo(x, y0);
@@ -54,7 +55,8 @@ function ChartScales(canvas, params) {
     }
 
     function lineY(value) {
-        var x = params.padding[3],
+        var x0 = self.padding[3],
+            x1 = self.width + self.padding[3],
             y = posY(value);
 
         ctx.textAlign = 'right';
@@ -62,38 +64,54 @@ function ChartScales(canvas, params) {
         ctx.font = '14px serif';
 
         value = value.toFixed(2);
-        ctx.moveTo(x, y);
-        ctx.lineTo(canvas.width - params.padding[1], y);
+        ctx.moveTo(x0, y);
+        ctx.lineTo(x1, y);
 
-        ctx.fillText(value, x - 10, y);
+        ctx.fillStyle = self.textColor;
+        ctx.fillText(value, x0 - 10, y);
+    }
+
+    function lineX(value) {
+        var x = value.pos * self.rateX + self.padding[3],
+            y0 = self.padding[0],
+            y1 = self.chart.height + y0;
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.font = (value.txt.length < 4 ? 12 : 14) + 'px serif';
+
+        ctx.moveTo(x, y0);
+        ctx.lineTo(x, y1);
+
+        ctx.fillStyle = self.textColor;
+        ctx.fillText(value.txt, x, y1 + 10);
     }
 
 
-    this.render = function(done) {
-        if (!done) return;
+    this.render = function() {
 
-        ctx.strokeStyle = params.scales.lineColor;
+        ctx.strokeStyle = self.lineColor;
         
-        if (params.scales.axisX !== false) {
+        if (self.axisX !== false) {
             drawX();
         }
         
-        if (params.scales.axisY !== false) {
+        if (self.axisY !== false) {
             drawY();
         }
 
-        if (params.scales.linesY !== false) {
-            var lines = [self.data.minValue, self.data.maxValue, 0],
-                absMax = Math.max(Math.abs(self.data.minValue), Math.abs(self.data.maxValue)),
-                step = params.scales.linesY;
+        if (self.linesY !== false) {
+            let lines = [self.minValue, self.maxValue, 0],
+                absMax = Math.max(Math.abs(self.minValue), Math.abs(self.maxValue)),
+                step = self.linesY;
 
-            if (params.scales.linesY !== true) {
+            if (self.linesY !== true) {
                 for (var i = step; i < absMax; i += step) {
-                    if (i < Math.abs(self.data.maxValue)) {
-                        lines.push(i * (self.data.maxValue < 0 ? -1 : 1));
+                    if (i < Math.abs(self.maxValue)) {
+                        lines.push(i * (self.maxValue < 0 ? -1 : 1));
                     }
-                    if (i < Math.abs(self.data.minValue)) {
-                        lines.push(i * (self.data.minValue < 0 ? -1 : 1));
+                    if (i < Math.abs(self.minValue)) {
+                        lines.push(i * (self.minValue < 0 ? -1 : 1));
                     }
                 }
             }
@@ -101,6 +119,28 @@ function ChartScales(canvas, params) {
             ctx.beginPath();
             lines.map(function(value) {
                 lineY(value);
+            })
+            ctx.stroke();
+        }
+
+        if (self.linesX !== false) {
+            let lines = [];
+
+            for (var i = 0; i < self.data.length; i++) {
+                let d = self.data[i].t,
+                    match = d.match(/(\d{4})-(\d\d)-01/);
+                if (match) {
+                    lines.push({
+                        pos: i,
+                        txt: match[2] == '01' ? match[1] : match[2]
+                    });
+                    i += 27;
+                }
+            }
+
+            ctx.beginPath();
+            lines.map(function(value) {
+                lineX(value);
             })
             ctx.stroke();
         }
@@ -113,7 +153,7 @@ function ChartScales(canvas, params) {
         // if (!data.length) {
         //     return;
         // }
-        // ctx.fillRect(self.chart.margin[3], self.chart.margin[0], self.chart.width, self.chart.height);
+        // ctx.fillRect(self.padding[3], self.padding[0], self.chart.width, self.chart.height);
         // ctx.beginPath();
 
 

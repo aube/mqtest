@@ -290,7 +290,7 @@ var IDB = function(dbName, storeName) {
 
         objectStore.openCursor(keyRangeValue).onsuccess = function(event) {
             var cursor = event.target.result;
-            if (params.quantity && counter++ >= params.quantity || !cursor) {
+            if (!cursor) {
                 streamFn('done');
                 completedFn(dataWasSended ? 'done' : null);
                 return;

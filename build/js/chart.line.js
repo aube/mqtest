@@ -19,37 +19,27 @@ function ChartLine(canvas, params) {
     var self = this,
         ctx = canvas.getContext("2d");
 
-    this.chart = params.chart;
-    this.dataUpdated = false;
+    this.renderOn = params.chart.renderOn;
 
     function posY(value) {
-        var rate = params.height / (self.data.maxValue - self.data.minValue);
-        return params.height + params.margin[0] - (+value - self.data.minValue) * rate;
+        var rate = self.height / (self.maxValue - self.minValue);
+        return self.height + self.padding[0] - (+value - self.minValue) * rate;
     }
 
     function posX(value) {
-        var m = params.margin[3],
-            rate = 1,
-            points = self.data.array.length,
-            pointWidth = params.pointWidth || 1;
-
-        if (params.fitByWidth) {
-            rate = Math.max(1, params.width / pointWidth / points);
-        }
-
-        return value * rate * pointWidth + m;
+        return value * self.rateX * params.pointWidth + self.padding[3];
     }
 
     this.render = function(done) {
 
-        var data = this.data.array,
+        var data = self.data,
             x, y;
 
         if (!data.length) {
             return;
         }
 
-        ctx.strokeStyle = params.lineColor;
+        ctx.strokeStyle = params.chart.lineColor;
 
         ctx.beginPath();
         ctx.lineWidth = 1;
@@ -64,7 +54,6 @@ function ChartLine(canvas, params) {
             ctx.lineTo(x, y);
         }
         ctx.stroke();
-        self.dataUpdated = false;
     }
 
 
