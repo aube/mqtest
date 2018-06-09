@@ -24,12 +24,6 @@ function Chart(container, options) {
         fullData = [],
         width,
         height,
-        // options = {
-        //     noScroll: true,
-        //     yAxisPx: 100,
-        //     xAxisPx: 100,
-        // },
-        //calcs on init
         params = {
             width: 0,
             height: 0,
@@ -53,10 +47,17 @@ function Chart(container, options) {
                 fn: ChartLine,
                 rect: [0, 0, .2, 0],
                 renderOn: 'visible',
+                borderColor: '#ccc',
                 lineColor: '#333'
             },
             map: {
                 fn: ChartMap,
+                events: {
+                    click: function(x, y) {
+                        const INDENT = 10;
+                        moveChart(((x - this.x - INDENT) / quantityX) * fullQuantityX - positionX);
+                    }
+                },
                 rect: [.85, 0, 0, 0],
                 fullData: true,
                 lineColor: '#666',
@@ -73,6 +74,8 @@ function Chart(container, options) {
         inputFrom = new Input('from'),
         inputTo = new Input('to'),
         activeModules = [];
+
+
 
 
     function calculatePositionAndSizes(name) {
@@ -103,6 +106,8 @@ function Chart(container, options) {
 
         pn.height = pn.height - pn.padding[0] - pn.padding[2];
         pn.width = pn.width - pn.padding[1] - pn.padding[3];
+        pn.y = pn.padding[0];
+        pn.x = pn.padding[3];
 
         if (name == 'chart') {
             quantityX = pn.width;
@@ -112,6 +117,9 @@ function Chart(container, options) {
     function resize() {
         let p = params.padding,
             pc = params.chart.padding;
+
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
 
         self.width = canvas.offsetWidth;
         self.height = canvas.offsetHeight;
@@ -137,8 +145,15 @@ function Chart(container, options) {
     function addModules() {
         getAllModules().map(function(name) {
             let mdl = new params[name].fn(canvas, params);
+            mdl.name = name;
             for (let p in params[name]) {
                 if (p === 'fn') {
+                    continue;
+                }
+                if (p === 'events') {
+                    for (let event in params[name][p]) {
+                        mdl[event] = params[name][p][event];
+                    }
                     continue;
                 }
                 mdl[p] = params[name][p];
@@ -255,6 +270,14 @@ function Chart(container, options) {
                 mdl.positionX = positionX;
                 mdl.quantityX = quantityX;
                 mdl.fullQuantityX  = fullQuantityX;
+
+                //sizes
+                mdl.padding = params[mdl.name].padding;
+                mdl.width = params[mdl.name].width;
+                mdl.height = params[mdl.name].height;
+                mdl.x = params[mdl.name].x;
+                mdl.y = params[mdl.name].y;
+
                 mdl.render(dataState);
             }
         });
@@ -271,14 +294,20 @@ function Chart(container, options) {
 
 
     function moveChart(shift) {
-        if (dataState !== 'done') return;
         shift = shift || 100;
-        positionX = Math.max(positionX + shift, 0);
-        positionX = Math.min(positionX, fullQuantityX - quantityX);
-        renderModules();
+        utils.animate({
+            duration: 200,
+            timing: 'circ',
+            draw: function(progress) {
+                positionX = Math.max(positionX + progress * shift, 0);
+                positionX = Math.min(positionX, fullQuantityX - quantityX);
+                positionX = Math.max(positionX, 0);
+                shift = shift - progress * shift;
+                renderModules();
+            }
+        });
     }
 
-    // setInterval(moveChart, 555);
 
     function dataUpdate() {
         data = [];
@@ -301,7 +330,6 @@ function Chart(container, options) {
 
         dataState = '';
 
-        // console.log('_params',_params);
 
         Data.get(_params, function(d) {
             // if (dataState == 'done') return;
@@ -325,22 +353,14 @@ function Chart(container, options) {
             //     inputTo.value = t.substr(0, 4)
             // }
 
+            fullQuantityX = data.length;
             if (d === 'done') {
                 dataState = 'done';
-                fullQuantityX = data.length;
             } else {
                 dataState = params.chart.width ? 'visible' : 'invisible';
             }
 
-            // if (dataState === 'done') {
-            //     renderModules();
-            // } else {
-                requestAnimationFrame(function() {
-                    renderModules();
-                });
-            // }
-
-            // document.forms.period.from = startyear;
+            requestAnimationFrame(renderModules);
         });
     }
 
@@ -349,13 +369,36 @@ function Chart(container, options) {
         resize();
         addModules();
         dataUpdate();
+
     })();
 
 
 
+    window.addEventListener('resize', function() {
+        resize();
+        renderModules();
+    });
 
+    canvas.addEventListener('wheel', function(e) {
+        e.preventDefault();
+        moveChart(20 * (e.deltaY > 0 ? -1 : 1));
+    });
 
-    // this.resize(canvas);
+    function targetModuleEvents(event, x, y) {
+        // console.log('',x, y);
+        activeModules.map(function(mdl) {
+            if (mdl[event] &&
+                mdl.x <= x && mdl.x + mdl.width >= x &&
+                mdl.y <= y && mdl.y + mdl.height >= y) {
+                mdl[event].call(mdl, x, y);
+            }
+        })
+    }
+
+    canvas.addEventListener('click', function(e) {
+        targetModuleEvents('click', e.offsetX, e.offsetY);
+    });
+
 
 }
 

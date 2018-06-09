@@ -23,19 +23,20 @@ function ChartMap(canvas, params) {
 
     function posY(value) {
         var rate = self.height / (self.maxValue - self.minValue);
-        return self.height + self.padding[0] - (+value - self.minValue) * rate;
+        return self.height + self.y - (+value - self.minValue) * rate;
     }
 
     function posX(value) {
-        return value * self.rateX * params.pointWidth + self.padding[3];
+        return value * self.rateX * params.pointWidth + self.x;
     }
 
     function loadingText(txt) {
         ctx.font = '14px serif';
+        ctx.textBaseline = 'middle';
         ctx.fillText(
             txt,
-            self.padding[3] + self.width / 2,
-            self.padding[0] + self.height / 2
+            self.x + self.width / 2,
+            self.y + self.height / 2
         );
     }
 
@@ -43,8 +44,8 @@ function ChartMap(canvas, params) {
         let rate = self.quantityX / self.fullQuantityX;
         ctx.fillStyle = self.selectionColor;
         ctx.fillRect(
-            self.padding[3] + rate * self.positionX,
-            self.padding[0],
+            self.x + rate * self.positionX,
+            self.y,
             Math.max(5, rate * self.width),
             self.height
         );
@@ -63,8 +64,10 @@ function ChartMap(canvas, params) {
         ctx.beginPath();
         ctx.lineWidth = 1;
         ctx.lineJoin = 'round';
-        ctx.strokeStyle = self.borderColor;
-        ctx.strokeRect(self.padding[3], self.padding[0], self.width, self.height);
+        if (self.borderColor) {
+            ctx.strokeStyle = self.borderColor;
+            ctx.strokeRect(self.x, self.y, self.width, self.height);
+        }
 
         if (dataState !== 'done') {
             loadingText('Loading: ' + data.slice(-1)[0].t);

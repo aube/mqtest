@@ -19,15 +19,13 @@ function ChartLine(canvas, params) {
     var self = this,
         ctx = canvas.getContext("2d");
 
-    this.renderOn = params.chart.renderOn;
-
     function posY(value) {
         var rate = self.height / (self.maxValue - self.minValue);
-        return self.height + self.padding[0] - (+value - self.minValue) * rate;
+        return self.height + self.y - (+value - self.minValue) * rate;
     }
 
     function posX(value) {
-        return value * self.rateX * params.pointWidth + self.padding[3];
+        return value * self.rateX * params.pointWidth + self.x;
     }
 
     this.render = function(done) {
@@ -39,12 +37,17 @@ function ChartLine(canvas, params) {
             return;
         }
 
-        ctx.strokeStyle = params.chart.lineColor;
 
         ctx.beginPath();
         ctx.lineWidth = 1;
         ctx.lineJoin = 'round';
 
+        if (self.borderColor) {
+            ctx.strokeStyle = self.borderColor;
+            ctx.strokeRect(self.x, self.y, self.width, self.height);
+        }
+
+        ctx.strokeStyle = self.lineColor;
         y = posY(data[0].v);
         x = posX(0);
         ctx.moveTo(x, y);

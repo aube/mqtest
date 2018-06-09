@@ -93,7 +93,7 @@
         var chart = this;
 
         //first load
-        //container class '.loadind' should be set for content size calc on activation
+        //container class '.loadind' should be set for content size calc on init
         if (!chart.ctrl) {
             chart.container.classList.add('loading')
             chart.ctrl = new Chart(chart.container, chart);
@@ -167,8 +167,6 @@
 
 
 
-
-
 utils = {
     crEl: function(name, container, attributes) {
         if (typeof container === 'string') {
@@ -182,6 +180,49 @@ utils = {
             }
         }
         return el;
+    },
+
+    animate: function(options, cb) {
+        var start = performance.now(),
+            timings = {
+                pow2: function(progress) {
+                    return Math.pow(progress, 2);
+                },
+                pow5: function(progress) {
+                    return Math.pow(progress, 5);
+                },
+                circ: function(progress) {
+                    return 1 - Math.sin(Math.acos(progress));
+                },
+                linear: function(progress) {
+                    return progress;
+                },
+                makeEaseOut: function(timing) {
+                    timing = timings[timing || 'pow2'];
+                    return function(progress) {
+                        return 1 - timing(1 - progress);
+                    }
+                }
+            },
+            timing = timings.makeEaseOut();
+            
+
+        if (options.timing) {
+            timing = timings[options.timing];
+        }
+
+        requestAnimationFrame(function _animate(time) {
+            var timeFraction = Math.min(1, (time - start) / options.duration),
+                progress = timing(timeFraction);
+
+            options.draw(progress);
+
+            if (timeFraction < 1) {
+                requestAnimationFrame(_animate);
+            } else if (cb) {
+                cb();
+            }
+        });
     },
 
     ym: function(dateString) {

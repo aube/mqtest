@@ -47,6 +47,7 @@ function ChartScales(canvas, params) {
         var y0 = self.padding[0],
             y1 = self.chart.height + y0,
             x = self.padding[3];
+
         ctx.beginPath();
         ctx.lineWidth = 1;
         ctx.moveTo(x, y0);
