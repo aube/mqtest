@@ -3,11 +3,6 @@
 
 function Chart(container, options) {
 
-    var positionX = 0,
-        quantityX = 1,
-        fullQuantityX = 1,
-        dataState = '';
-
     this.min = 0;
     this.max = 3000;
     this.from = 0;
@@ -20,16 +15,12 @@ function Chart(container, options) {
     }
 
     var self = this,
-        data = [],
-        fullData = [],
-        width,
-        height,
         params = {
             width: 0,
             height: 0,
             minDate: 0,
             maxDate: 3000,
-            padding: [50, 50, 50, 50], //top, right, bottom, left
+            padding: [10, 2, 10, 50], //top, right, bottom, left
             fitByWidth: true,
             pointWidth: 1,
             scales: {
@@ -52,34 +43,133 @@ function Chart(container, options) {
             },
             map: {
                 fn: ChartMap,
-                events: {
-                    click: function(x, y) {
-                        const INDENT = 10;
-                        moveChart(((x - this.x - INDENT) / quantityX) * fullQuantityX - positionX);
-                    }
-                },
                 rect: [.85, 0, 0, 0],
                 fullData: true,
+                averaging: true,
                 lineColor: '#666',
                 borderColor: '#ccc',
-                selectionColor: '#ffdd88',
-                position: 'after', //'after' || 'before', default is 'after'
-                height: 20 //percents
+                selectionColor: '#ffdd88'
             }
         };
 
+    self.positionX = 0;
+    self.quantityX = 1;
+    self.fullQuantityX = 1;
+    self.dataState = '';
+    self.rateX = 1;
+    self.store = 'months';
+    self.data = [];
 
-    var controls = utils.crEl('div', container, {class: 'chart-controls'}),
-        canvas = utils.crEl('canvas', container, {class: 'chart'}),
-        inputFrom = new Input('from'),
-        inputTo = new Input('to'),
-        activeModules = [];
+    var controls,
+        canvas,
+        inputFrom,
+        inputTo,
+        activeModules;
+
+    function addControls(minDate, maxDate) {
+        controls = utils.crEl('div', container, {class: 'chart-controls'});
+        canvas = utils.crEl('canvas', container, {class: 'chart'});
+        inputFrom = new Input('from', minDate, maxDate);
+        inputTo = new Input('to', minDate, maxDate);
+
+        utils.crEl('span', controls, {
+            class: 'chart',
+            txt: 'months'
+        }).addEventListener('click', function() {
+            inputFrom.type = 'month';
+            inputTo.type = 'month';
+            self.store = 'months';
+            console.log('months');
+            dataUpdate();
+        });
+
+        utils.crEl('span', controls, {
+            class: 'chart',
+            txt: 'days'
+        }).addEventListener('click', function() {
+            inputFrom.type = 'date';
+            inputTo.type = 'date';
+            self.store = 'days';
+            dataUpdate();
+        });
+    }
 
 
+    function Input(name, min, max) {
+        var input = utils.crEl('input', controls, {
+            type: min.length > 7 ? 'date' : 'month',
+            name: name,
+            value: name == 'from' ? min : max,
+            min: min,
+            max: max
+        });
+
+        input.addEventListener('keyup', update);
+        input.addEventListener('change', update);
+        input.addEventListener('mouseup', update);
+        self.period[name] = input.value;
+
+        function update() {
+            if (self.period[name] == input.value) {
+                return;
+            }
+            self.period[name] = input.value;
+            hash[name] = input.value;
+            hash.update();
+            // dataUpdate();
+        }
+
+        return {
+            el: input,
+            set value(v) {
+                input.value = v;
+                update();
+            },
+            set type(type) {
+                var value = input.value.substr(0, 7);
+                if (type === 'date') {
+                    value += '-' + (name === 'to' ? utils.daysInMonth(value) : '01');
+                }
+                input.type = type;
+                input.value = value;
+                self.fullQuantityX = self.data.length;
+                update()
+            }
+        }
+    }
 
 
-    function calculatePositionAndSizes(name) {
-        var p = params.padding,
+    function calculateCanvasSize() {
+        let p = params.padding,
+            pc = params.chart.padding,
+            w, h;
+
+        //reset for resize
+        canvas.style.width = null;
+        canvas.style.height = null;
+        w = canvas.offsetWidth;
+        h = canvas.offsetHeight;
+
+        self.ratio = utils.getPixelRatio(canvas.getContext("2d"));
+        self.width = w * self.ratio;
+        self.height = h * self.ratio;
+
+        canvas.setAttribute('width', self.width);
+        canvas.setAttribute('height', self.height);
+
+        canvas.style.width = w + 'px';
+        canvas.style.height = h + 'px';
+
+        let rect = canvas.getBoundingClientRect();
+        canvas.left = rect.left;
+        canvas.top = rect.top;
+
+        (activeModules || getAllModulesFromParams()).map(calculateModulePositionAndSize);
+    }
+
+    function calculateModulePositionAndSize(mdl) {
+        var name = mdl.name || mdl,
+            p = params.padding,
             pn = params[name],
             pos = 0;
 
@@ -110,29 +200,18 @@ function Chart(container, options) {
         pn.x = pn.padding[3];
 
         if (name == 'chart') {
-            quantityX = pn.width;
+            self.quantityX = pn.width;
+        }
+
+        if (mdl.name) {
+            mdl.height = pn.height;
+            mdl.width = pn.width;
+            mdl.y = pn.y;
+            mdl.x = pn.x;
         }
     }
 
-    function resize() {
-        let p = params.padding,
-            pc = params.chart.padding;
-
-        canvas.style.width = '100%';
-        canvas.style.height = '100%';
-
-        self.width = canvas.offsetWidth;
-        self.height = canvas.offsetHeight;
-
-        canvas.setAttribute('width', parseInt(self.width));
-        canvas.setAttribute('height', parseInt(self.height));
-        canvas.style.width = parseInt(self.width) + 'px';
-        canvas.style.height = parseInt(self.height) + 'px';
-
-        getAllModules().map(calculatePositionAndSizes);
-    }
-
-    function getAllModules() {
+    function getAllModulesFromParams() {
         var modules = [];
         for (let name in params) {
             if (params[name].fn) {
@@ -143,17 +222,13 @@ function Chart(container, options) {
     }
 
     function addModules() {
-        getAllModules().map(function(name) {
+        activeModules = [];
+        getAllModulesFromParams().map(function(name) {
             let mdl = new params[name].fn(canvas, params);
             mdl.name = name;
+            Object.setPrototypeOf(mdl, self);
             for (let p in params[name]) {
                 if (p === 'fn') {
-                    continue;
-                }
-                if (p === 'events') {
-                    for (let event in params[name][p]) {
-                        mdl[event] = params[name][p][event];
-                    }
                     continue;
                 }
                 mdl[p] = params[name][p];
@@ -162,75 +237,49 @@ function Chart(container, options) {
         });
     }
 
-    function Input(name) {
-        var input = utils.crEl('input', controls, {
-            type: 'number',
-            name: name,
-            value: hash[name]
-        });
-
-        input.addEventListener('keyup', update);
-        input.addEventListener('change', update);
-        input.addEventListener('mouseup', update);
-        self.period[name] = input.value;
-
-        function update() {
-            if (self.period[name] == input.value) {
-                return;
-            }
-            self.period[name] = input.value;
-            hash[name] = input.value;
-            hash.update();
-            dataUpdate();
-        }
-
-        return {
-            el: input,
-            set value(v) {
-                input.value = v;
-                update();
-            }
-        }
-    }
-
 
     function dataCompression(averaging) {
-        if (quantityX >= fullQuantityX) {
-            return data;
+        if (self.quantityX >= self.fullQuantityX) {
+            return self.data;
         }
 
-        let _data = [],
-            rate = fullQuantityX / quantityX;
+        let data = self.data,
+            _data = [],
+            rate = self.fullQuantityX / self.quantityX;
 
-        for (let i = 0; i < quantityX; i++) {
-            let d = Math.min(Math.round(i * rate), fullQuantityX - 1);
+        for (let i = 0, ii = Math.min(data.length, self.quantityX); i < ii; i++) {
+            let d = Math.min(Math.round(i * rate), self.fullQuantityX - 1);
 
             if (averaging) {
                 let avr = 0,
-                    dd = Math.min(Math.round((i + 1) * rate), fullQuantityX - 1);
+                    dd = Math.min(Math.round((i + 1) * rate), self.fullQuantityX - 1);
 
                 for (let a = d; a <= dd; a++) {
-                    avr += +data[a].v;
+                    avr += +(data[a] || {}).v;
                 }
+
                 _data.push({
                     t: data[d].t,
                     v: avr / Math.max(1, dd - d)
                 });
             } else {
-                _data.push(data[d]);
+                _data.push(data[d] || {v: 0});
             }
         }
         return _data;
     }
 
-    function getMinMaxValues(data) {
+    function getMinMaxValues(_data) {
         let min = Infinity,
             max = -Infinity;
 
-        //min/max update for compressed data
-        for (var i = data.length - 1; i >= 0; i--) {
-            min = Math.min(min, +data[i].v);
-            max = Math.max(max, +data[i].v);
+        for (var i = _data.length - 1; i >= 0; i--) {
+            min = Math.min(min, +_data[i].v);
+            max = Math.max(max, +_data[i].v);
+        }
+
+        if (!_data.length) {
+            return {min: -1, max: 1};
         }
 
         return {
@@ -239,24 +288,22 @@ function Chart(container, options) {
         }
     }
 
-
-    function renderModules() {
-        let _data = data.slice(positionX, positionX + quantityX),
-            rateX = 1,
+    function renderModules(force) {
+        let _data = self.data.slice(self.positionX, self.positionX + self.quantityX),
             minMaxValues = getMinMaxValues(_data);
 
         if (params.fitByWidth) {
-            rateX = Math.max(1, params.chart.width / params.pointWidth / _data.length);
+            self.rateX = Math.max(1, params.chart.width / params.pointWidth / _data.length);
         }
 
-        if (dataState !== 'invisible') {
+        if (self.dataState !== 'invisible') {
             cleanup();
         }
 
         activeModules.map(function(mdl) {
-            if (dataState === 'done' || mdl.renderOn === dataState || !mdl.renderOn) {
+            if (force || self.dataState === 'done' || mdl.renderOn === self.dataState || !mdl.renderOn) {
                 if (mdl.fullData) {
-                    mdl.data = dataCompression(mdl.avaraging);
+                    mdl.data = dataCompression(mdl.averaging);
                     let mmv = getMinMaxValues(mdl.data)
                     mdl.minValue = mmv.min;
                     mdl.maxValue = mmv.max;
@@ -265,20 +312,7 @@ function Chart(container, options) {
                     mdl.minValue = minMaxValues.min;
                     mdl.maxValue = minMaxValues.max;
                 }
-                mdl.rateX = rateX;
-                mdl.dataState = dataState;
-                mdl.positionX = positionX;
-                mdl.quantityX = quantityX;
-                mdl.fullQuantityX  = fullQuantityX;
-
-                //sizes
-                mdl.padding = params[mdl.name].padding;
-                mdl.width = params[mdl.name].width;
-                mdl.height = params[mdl.name].height;
-                mdl.x = params[mdl.name].x;
-                mdl.y = params[mdl.name].y;
-
-                mdl.render(dataState);
+                mdl.render();
             }
         });
         
@@ -292,113 +326,111 @@ function Chart(container, options) {
         ctx.restore();
     }
 
-
-    function moveChart(shift) {
-        shift = shift || 100;
+    function moveChartAni(shift, duration) {
+        if (shift === 0) return;
         utils.animate({
-            duration: 200,
+            duration: duration || 200,
             timing: 'circ',
             draw: function(progress) {
-                positionX = Math.max(positionX + progress * shift, 0);
-                positionX = Math.min(positionX, fullQuantityX - quantityX);
-                positionX = Math.max(positionX, 0);
+                moveChart(progress * shift)
                 shift = shift - progress * shift;
-                renderModules();
             }
         });
     }
 
+    function moveChart(shift, duration) {
+        if (shift === 0) {
+            return;
+        }
+        if (duration) {
+            return moveChartAni(shift, duration);
+        }
+        var newPositionX = Math.max(self.positionX + shift, 0);
+        newPositionX = Math.min(newPositionX, self.fullQuantityX - self.quantityX);
+        newPositionX = Math.max(newPositionX, 0);
+        if (self.positionX != newPositionX) {
+            self.positionX = newPositionX;
+            renderModules();
+            return true
+        }
+        return false;
+    }
+    self.moveChart = moveChart;
 
     function dataUpdate() {
-        data = [];
         if (self.period.from > self.period.to) {
             return;
         }
 
-        var _params = {
-            url: options.dataSource,
-            quantity: quantityX,
-
-            from: (self.period.from || 1881) + '-01-01',
-            to: (self.period.to || 1890) + '-12-31'
-        }
-
-        // if (self.period.from && self.period.to) {
-        //     _params.from = self.period.from + '-01-01';
-        //     _params.to = self.period.to + '-12-31';
-        // }
-
-        dataState = '';
-
-
-        Data.get(_params, function(d) {
-            // if (dataState == 'done') return;
-
-            if (d.stream) {
-                data.push(d.stream);
-                // inputTo.el.value = ('' + d.stream.t).substr(0, 4)
-            } else if (d !== 'done'){
-                data = d;
+        var uid = options.dataSource + Date.now(),
+            _params = {
+                id: uid,
+                url: options.dataSource,
+                quantity: self.quantityX,
+                from: self.period.from,
+                to: self.period.to,
+                store: self.store
             }
 
-            // console.log('data',data);
-            // chart.data = data;
 
-            // if (!self.period.from) {
-            //     let t = '' + data[0].t;
-            //     inputFrom.value = t.substr(0, 4)
-            // }
-            // if (!self.period.to) {
-            //     let t = '' + data.slice(-1)[0].t;
-            //     inputTo.value = t.substr(0, 4)
-            // }
+        self.data = [];
+        self.dataState = '';
+        renderModules(true);
 
-            fullQuantityX = data.length;
-            if (d === 'done') {
-                dataState = 'done';
+        Data.get(_params, function(_data) {
+
+            if (_data.id !== _params.id) {
+            console.log('',_data.id, _params.id);
+                // _data.stop();
+                return;
+            }
+            if (_data.stream) {
+                self.data.push(_data.stream);
+            } else if (_data.all){
+                self.data = _data.all;
+                self.dataState = 'done';
+            // } else {
+            //     self.dataState = 'error';
+            //     return;
+            }
+
+            self.fullQuantityX = self.data.length;
+            if (_data.state === 'done' || _data.all) {
+                self.dataState = 'done';
             } else {
-                dataState = params.chart.width ? 'visible' : 'invisible';
+                self.dataState = params.chart.width ? 'visible' : 'invisible';
             }
 
-            requestAnimationFrame(renderModules);
+            if (self.dataState === 'done' || self.data.length % 100 === 0) {
+                // if (_data.store == self.store) {
+                    requestAnimationFrame(renderModules);
+                // }
+            }
         });
     }
 
     (function init() {
+        Data.getMinMaxDates(addControls);
 
-        resize();
-        addModules();
-        dataUpdate();
+        //Promises can be save us in this row, but they will not because IE
+        setTimeout(function() {
+            calculateCanvasSize();
+            addModules();
+            dataUpdate();
+            Object.setPrototypeOf(new ChartEvents(canvas, activeModules), self);
 
-    })();
-
-
-
-    window.addEventListener('resize', function() {
-        resize();
-        renderModules();
-    });
-
-    canvas.addEventListener('wheel', function(e) {
-        e.preventDefault();
-        moveChart(20 * (e.deltaY > 0 ? -1 : 1));
-    });
-
-    function targetModuleEvents(event, x, y) {
-        // console.log('',x, y);
-        activeModules.map(function(mdl) {
-            if (mdl[event] &&
-                mdl.x <= x && mdl.x + mdl.width >= x &&
-                mdl.y <= y && mdl.y + mdl.height >= y) {
-                mdl[event].call(mdl, x, y);
-            }
-        })
-    }
-
-    canvas.addEventListener('click', function(e) {
-        targetModuleEvents('click', e.offsetX, e.offsetY);
-    });
-
+            //TODO: add checkup canvas visiblility:
+            window.addEventListener('resize', function() {
+                calculateCanvasSize();
+                renderModules();
+            });
+            window.addEventListener('scroll', function() {
+                let rect = canvas.getBoundingClientRect();
+                canvas.left = rect.left;
+                canvas.top = rect.top;
+            });
+        }, 100);
+    })()
 
 }
 

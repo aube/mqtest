@@ -1,18 +1,7 @@
-
-
-
-
 /**
- * Splits given string into chunks of given length
- * & joins them with a given separator string.
- *
- * @example
- * getSplittedString("abcdefghi") = "abc-def-ghi"
- *
- * @param {String} str
- * @param {Number} [chunkLen=3]
- * @param {String} [sep='-']
- * @returns {String}
+ * ChartMap module for Chart
+ * Displaying data map bottom (usually) of canvas
+ * can be used like scrollbar
  */
 function ChartMap(canvas, params) {
 
@@ -21,17 +10,21 @@ function ChartMap(canvas, params) {
 
     ctx.translate(0.5, 0.5);
 
-    function posY(value) {
+    function _posY(value) {
         var rate = self.height / (self.maxValue - self.minValue);
         return self.height + self.y - (+value - self.minValue) * rate;
     }
 
-    function posX(value) {
+    function _posX(value) {
         return value * self.rateX * params.pointWidth + self.x;
     }
 
-    function loadingText(txt) {
-        ctx.font = '14px serif';
+    /**
+     * Writes text on the map, before all data is loading complete
+     * @param  {String} txt
+     */
+    function displayLoadingText(txt) {
+        ctx.font = (10 + 4 * self.ratio) + 'px serif';
         ctx.textBaseline = 'middle';
         ctx.fillText(
             txt,
@@ -40,18 +33,45 @@ function ChartMap(canvas, params) {
         );
     }
 
-    function activePosition() {
-        let rate = self.quantityX / self.fullQuantityX;
+    /**
+     * Returns coordinates and sizes of highlighted zone on map
+     * @return {Array} [x, y, width, height]
+     */
+    function getHighlitedZoneCoords() {
+        let rate = self.quantityX / self.fullQuantityX,
+            width = Math.max(20, rate * self.width) * self.ratio,
+            x = self.x + rate * self.positionX;
+
+        if (x + width > self.x + self.quantityX) {
+            x = Math.max(self.x, self.x + self.quantityX - width);
+        }
+
+        return [
+            x,
+            self.y,
+            width,
+            self.height
+        ]
+    }
+
+    /**
+     * Hightlited visible chart zone on map
+     */
+    function hightlightVisibleZone() {
+        let coords = getHighlitedZoneCoords();
         ctx.fillStyle = self.selectionColor;
         ctx.fillRect(
-            self.x + rate * self.positionX,
-            self.y,
-            Math.max(5, rate * self.width),
-            self.height
+            coords[0],
+            coords[1],
+            coords[2],
+            coords[3]
         );
     }
 
-    this.render = function(dataState) {
+    /**
+     * Line chart builder
+     */
+    this.render = function() {
         let data = self.data,
             _min = Infinity,
             _max = -Infinity,
@@ -69,27 +89,65 @@ function ChartMap(canvas, params) {
             ctx.strokeRect(self.x, self.y, self.width, self.height);
         }
 
-        if (dataState !== 'done') {
-            loadingText('Loading: ' + data.slice(-1)[0].t);
+        if (self.dataState !== 'done') {
+            displayLoadingText('Loading: ' + data.slice(-1)[0].t);
             return;
         } else {
-            activePosition();
+            hightlightVisibleZone();
             ctx.strokeStyle = self.lineColor;
-            y = posY(data[0].v);
-            x = posX(0);
+            y = _posY(data[0].v);
+            x = _posX(0);
             ctx.moveTo(x, y);
             for (var i = 1; i < data.length; i++) {
-                y = posY(data[i].v);
-                x = posX(i);
+                y = _posY(data[i].v);
+                x = _posX(i);
                 ctx.lineTo(x, y);
             }
         }
         ctx.stroke();
     }
 
+    /**
+     * Drag'n'Drop
+     */
+    var drag,
+        startX;
 
-    this.getByPoint = function(x, y) {
-        return this.data && this.data[~~x];
+    this.click = function(x, y) {
+        if (!drag) {
+            self.moveChart(((x - self.x) / self.quantityX) * self.fullQuantityX - self.positionX - self.quantityX / 2, 200);
+        }
+    }
+
+    this.mousedown = function(x, y) {
+        let coords = getHighlitedZoneCoords();
+        if (x > coords[0] && x < coords[0] + coords[2]) {
+            drag = 'prepare';
+            startX = x;
+        }
+    }
+
+    this.mouseup = function(x, y) {
+        setTimeout(function() {
+            drag = false;
+        })
+    }
+
+    this.mouseleave = function(x, y) {
+        drag = false;
+    }
+
+    this.mousemove = function(x, y) {
+        if (!drag) {
+            return;
+        }
+        if (drag == 'prepare' && Math.abs(startX - x) > 5) {
+            drag = 'active';
+        }
+        if (drag == 'active') {
+            self.moveChart(((x - startX) / self.quantityX) * self.fullQuantityX);
+            startX = x;
+        }
     }
 
 }

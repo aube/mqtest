@@ -1,3 +1,15 @@
+@mixin mq($width, $type: min) {
+    @if map_has_key($breakpoints, $width) {
+        $width: map_get($breakpoints, $width);
+        @if $type == max {
+            $width: $width - 1px;
+        }
+        @media only screen and (#{$type}-width: $width) {
+            @content;
+        }
+    }
+}
+
 $breakpoints: (
     "phone":        400px,
     "phone-wide":   480px,
@@ -13,43 +25,57 @@ $breakpoints: (
     "xl": 1200px 
 );
 
+$controls-borders: 1px solid #ccc;
 $header-height: 5rem;
+$header-height-mobile: 1rem;
+$chart-controls-height: 2rem;
 
-@mixin mq($width, $type: min) {
-    @if map_has_key($breakpoints, $width) {
-        $width: map_get($breakpoints, $width);
-        @if $type == max {
-            $width: $width - 1px;
-        }
-        @media only screen and (#{$type}-width: $width) {
-            @content;
-        }
-    }
-}
 
 body {
     margin: 0;
     padding: 0 1rem;
     height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 .flex-container {
     height: calc(100vh - #{$header-height});
-        align-items: stretch;
-        display: flex;
+    align-items: stretch;
+    display: flex;
+    // background-color: orange;
+    margin:0;
+    padding:0;
     @include mq('sm', 'max') {
         flex-direction: column;
+        height: calc(100vh - #{$header-height-mobile});
     }
 }
 
-.header {
-    margin: 0;
-    height: $header-height;
+
+header {
     background: #fff;
 
-    @include mq('sm') {
-        line-height: $header-height;
+    h1 {
+        margin: 0;
+        font-weight: normal;
+        color: #444;
+        line-height: .8;
+        padding: 1rem 0;
+        a {
+            text-decoration: none;
+            color: #444;
+        }
     }
+}
+
+#data-state {
+    position: absolute;
+    background-color: #fff;
+    padding: .1rem;
+    top: calc(.5rem + #{$chart-controls-height});
+    right: 0rem;
+    color: darkred;
 }
 
 nav {
@@ -63,12 +89,24 @@ nav {
         li {
             line-height: 2rem;
             display: block;
-            border: 1px solid #aaa;
+            border: $controls-borders;
             padding: .3rem;
             margin-bottom: 5px;
             cursor: pointer;
             &.active {
                 background-color: #eee;
+            }
+        }
+        @include mq('sm', 'max') {
+            border-bottom: $controls-borders;
+            margin-bottom: 5px;
+            li {
+                border-top-left-radius: 10px;
+                border-top-right-radius: 10px;
+                display: inline-block;
+                border-bottom: none;
+                line-height: 1.4rem;
+                margin-bottom: 0;
             }
         }
     }
@@ -81,36 +119,48 @@ nav {
 
 
 main {
-    background: #aaa;
     width: 100%;
     height: 100%;
+    position: relative;
 
-    .chart-container {
-        .chart-contols {
-            
-            input {
-                font-size: 1.6rem;
-                width: 5rem;
-                display: inline-block;
-            }
-        
-        }
-
-        canvas{
-            height: 100%;
-            width: 100%;
-            background-color: #fafafa;
-        }
-        height: 100%;
-        width: 100%;
-        // background-color: red;
+    .tab {
         display: none;
         &.active {
             display: block;
         }
+    }
+
+    .chart-container {
+        height: 100%;
+        width: 100%;
+
+        &.active {
+            display: flex;
+            flex-direction: column;
+        }
+
         &.loading {
             opacity: 0;
             display: block;
+        }
+
+        .chart-controls {
+            margin: .3rem 0;
+            height: $chart-controls-height;
+            input {
+                // font-size: 1rem;
+                // display: inline-block;
+                // width: 40%;
+                
+            }
+        
+        }
+
+        canvas {
+            height: 100%;
+            width: 100%;
+            display: block;
+            background-color: #fafafa;
         }
     }
 

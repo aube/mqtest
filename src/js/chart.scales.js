@@ -1,7 +1,3 @@
-
-
-
-
 /**
  * Splits given string into chunks of given length
  * & joins them with a given separator string.
@@ -19,7 +15,7 @@ function ChartScales(canvas, params) {
     var self = this,
         ctx = canvas.getContext("2d");
 
-    
+    ctx.translate(0.5, 0.5);
 
     this.chart = params.chart;
 
@@ -62,7 +58,7 @@ function ChartScales(canvas, params) {
 
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
-        ctx.font = '14px serif';
+        ctx.font = (10 + 4 * self.ratio) + 'px serif';
 
         value = value.toFixed(2);
         ctx.moveTo(x0, y);
@@ -79,11 +75,11 @@ function ChartScales(canvas, params) {
 
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.font = (value.txt.length < 4 ? 12 : 14) + 'px serif';
 
         ctx.moveTo(x, y0);
         ctx.lineTo(x, y1);
 
+        ctx.font = (value.txt.length < 4 ? 2 : 4) * self.ratio + 10 + 'px serif';
         ctx.fillStyle = self.textColor;
         ctx.fillText(value.txt, x, y1 + 10);
     }
