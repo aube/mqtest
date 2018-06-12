@@ -17,19 +17,18 @@ function ChartScales(canvas, params) {
 
     ctx.translate(0.5, 0.5);
 
-    this.chart = params.chart;
-
+    self.chart = params.months;
 
     ctx.lineJoin = 'round';
 
     function posY(value) {
         var rate = self.chart.height / (self.maxValue - self.minValue);
-        return self.chart.height + self.padding[0] - (+value - self.minValue) * rate;
+        return self.chart.height + self.y - (+value - self.minValue) * rate;
     }
 
     function drawX() {
-        var x0 = self.padding[3],
-            x1 = self.width + self.padding[3],
+        var x0 = self.x,
+            x1 = self.width + self.x,
             y = self.axisX !== true ? posY(self.axisX) : self.height - self.padding[2];
 
         ctx.beginPath();
@@ -40,9 +39,9 @@ function ChartScales(canvas, params) {
     }
 
     function drawY() {
-        var y0 = self.padding[0],
+        var y0 = self.y,
             y1 = self.chart.height + y0,
-            x = self.padding[3];
+            x = self.x;
 
         ctx.beginPath();
         ctx.lineWidth = 1;
@@ -52,8 +51,8 @@ function ChartScales(canvas, params) {
     }
 
     function lineY(value) {
-        var x0 = self.padding[3],
-            x1 = self.width + self.padding[3],
+        var x0 = self.x,
+            x1 = self.width + self.x,
             y = posY(value);
 
         ctx.textAlign = 'right';
@@ -69,8 +68,8 @@ function ChartScales(canvas, params) {
     }
 
     function lineX(value) {
-        var x = value.pos * self.rateX + self.padding[3],
-            y0 = self.padding[0],
+        var x = value.pos * self.rateX + self.x,
+            y0 = self.y,
             y1 = self.chart.height + y0;
 
         ctx.textAlign = 'center';
@@ -125,13 +124,21 @@ function ChartScales(canvas, params) {
 
             for (var i = 0; i < self.data.length; i++) {
                 let d = self.data[i].t,
-                    match = d.match(/(\d{4})-(\d\d)-01/);
-                if (match) {
+                    matchDays = d.match(/(\d{4})-(\d\d)-01/),
+                    matchMonths = d.match(/(\d{4})-01/);
+                if (matchDays) {
                     lines.push({
                         pos: i,
-                        txt: match[2] == '01' ? match[1] : match[2]
+                        txt: matchDays[2] == '01' ? matchDays[1] : matchDays[2]
                     });
                     i += 27;
+                }
+                if (matchMonths) {
+                    lines.push({
+                        pos: i,
+                        txt: matchMonths[1]
+                    });
+                    i += 11;
                 }
             }
 
@@ -150,7 +157,7 @@ function ChartScales(canvas, params) {
         // if (!data.length) {
         //     return;
         // }
-        // ctx.fillRect(self.padding[3], self.padding[0], self.chart.width, self.chart.height);
+        // ctx.fillRect(self.x;
         // ctx.beginPath();
 
 

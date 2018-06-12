@@ -174,49 +174,61 @@ window.Data = {
      * @param  {Function} cb     [description]
      * @return {[type]}          [description]
      */
-    get: function(params, cb) {
+    get: (function() {
+        var activeQueries = {};
 
-        var dbName = params.url.split('.json')[0].split('/').pop(),
-            storeName = params.store,
-            iDB;
+        return function(params, cb) {
 
-        // params = utils.copyObj(params);
+            var dbName = params.url.split('.json')[0].split('/').pop(),
+                storeName = params.store,
+                qKey = dbName + storeName + params.from + params.to,
+                iDB;
 
-        utils.state('Read IndexedDB data');
-        console.time('iDB data select');
+            if (activeQueries[qKey]) {
+                return;
+            }
 
-        // //select benchmark w/o callbacks and render
-        // return Data.iDBs(dbName, storeName)
-        //     .select(params, function() {}, function() {
-        //         console.timeEnd('iDB data select');
-        //     });
+            utils.state('Read IndexedDB data');
+            console.time('iDB data select');
 
-        Data.iDBs(dbName, storeName)
-            .select(params, cb, function(data) {
+            // //select benchmark w/o callbacks and render
+            // return Data.iDBs(dbName, storeName)
+            //     .select(params, function() {}, function() {
+            //         console.timeEnd('iDB data select');
+            //     });
 
-                console.timeEnd('iDB data select');
+            activeQueries[qKey] = true;
 
-                if (data === 'done') {
-                    utils.state('height: 2rem;');
-                    return;
-                }
 
-                utils.state('IndexedDB data not found, try to download data from server');
+            Data.iDBs(dbName, storeName)
+                .select(params, cb, function(data) {
 
-                console.time('XHR data load');
-                utils.xhr(params, function(data) {
-                    console.timeEnd('XHR data load');
+                    activeQueries[qKey] = false;
 
-                    Data.saveDataLocal(data.all, dbName);
+                    console.timeEnd('iDB data select');
 
-                    cb(data);
+                    if (data === 'done') {
+                        utils.state();
+                        return;
+                    }
 
-                    // // Using Worker slowly then partial data save:
-                    // saveDataLocalWishWorker(data, dbName, storeName);
+                    utils.state('IndexedDB data not found, try to download data from server');
 
+                    console.time('XHR data load');
+                    utils.xhr(params, function(data) {
+                        console.timeEnd('XHR data load');
+
+                        Data.saveDataLocal(data.all, dbName);
+
+                        cb(data);
+
+                        // // Using Worker slowly then partial data save:
+                        // saveDataLocalWishWorker(data, dbName, storeName);
+
+                    });
                 });
-            });
-    }
+        }
+    })()
 }
 
 

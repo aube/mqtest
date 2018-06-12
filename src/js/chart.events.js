@@ -21,6 +21,9 @@ function ChartEvents(canvas, activeModules) {
         x = x * self.ratio;
         y = y * self.ratio;
         activeModules.map(function(mdl) {
+            if (mdl.renderOn && !mdl.renderOn()) {
+                return;
+            }
             if (mdl[event] &&
                 mdl.x <= x && mdl.x + mdl.width >= x &&
                 mdl.y <= y && mdl.y + mdl.height >= y) {

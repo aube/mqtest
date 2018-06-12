@@ -3,6 +3,8 @@
 
 function Chart(container, options) {
 
+    var self = this;
+
     this.min = 0;
     this.max = 3000;
     this.from = 0;
@@ -14,8 +16,15 @@ function Chart(container, options) {
         accuracy: 'year'
     }
 
-    var self = this,
-        params = {
+    self.positionX = 0;
+    self.quantityX = 1;
+    self.fullQuantityX = 1;
+    self.dataState = '';
+    self.rateX = 1;
+    self.store = 'months';
+    self.data = [];
+
+    var params = {
             width: 0,
             height: 0,
             minDate: 0,
@@ -25,7 +34,9 @@ function Chart(container, options) {
             pointWidth: 1,
             scales: {
                 fn: ChartScales,
-                renderOn: 'visible',
+                renderOn: function() {
+                    return (self.dataState === 'visible' || self.dataState === 'done')
+                },
                 axisY: true,
                 axisX: 0,
                 axisXHeight: 50,
@@ -34,12 +45,28 @@ function Chart(container, options) {
                 lineColor: '#ccc',
                 textColor: '#333'
             },
-            chart: {
+            days: {
                 fn: ChartLine,
+                type: 'chart',
                 rect: [0, 0, .2, 0],
-                renderOn: 'visible',
+                renderOn: function() {
+                    return self.store == 'days' && (self.dataState === 'visible' || self.dataState === 'done')
+                },
+                pointWidth: 1,
                 borderColor: '#ccc',
                 lineColor: '#333'
+            },
+            months: {
+                fn: ChartBars,
+                type: 'chart',
+                rect: [0, 0, .2, 0],
+                renderOn: function() {
+                    return self.store == 'months' && (self.dataState === 'visible' || self.dataState === 'done')
+                },
+                pointWidth: 7,
+                margin: 1,
+                borderColor: '#ccc',
+                barColor: '#aaa'
             },
             map: {
                 fn: ChartMap,
@@ -51,14 +78,6 @@ function Chart(container, options) {
                 selectionColor: '#ffdd88'
             }
         };
-
-    self.positionX = 0;
-    self.quantityX = 1;
-    self.fullQuantityX = 1;
-    self.dataState = '';
-    self.rateX = 1;
-    self.store = 'months';
-    self.data = [];
 
     var controls,
         canvas,
@@ -72,26 +91,33 @@ function Chart(container, options) {
         inputFrom = new Input('from', minDate, maxDate);
         inputTo = new Input('to', minDate, maxDate);
 
-        utils.crEl('span', controls, {
-            class: 'chart',
-            txt: 'months'
-        }).addEventListener('click', function() {
-            inputFrom.type = 'month';
-            inputTo.type = 'month';
-            self.store = 'months';
-            console.log('months');
-            dataUpdate();
-        });
+        function _onPeriodSizeSelect() {
+            let period = this.getAttribute('period'),
+                type = period === 'days' ? 'date' : 'month';
 
-        utils.crEl('span', controls, {
-            class: 'chart',
-            txt: 'days'
-        }).addEventListener('click', function() {
-            inputFrom.type = 'date';
-            inputTo.type = 'date';
-            self.store = 'days';
+            if (this.classList.contains('active')) {
+                // return;
+            }
+            self.store = period;
+            controls.querySelector('.chart-period-size.active').classList.remove('active');
+            this.classList.add('active');
+            
+            inputFrom.type = type;
+            inputTo.type = type;
             dataUpdate();
-        });
+        }
+
+        utils.crEl('button', controls, {
+            class: 'chart-period-size active',
+            period: 'months',
+            txt: 'Months'
+        }).addEventListener('click', _onPeriodSizeSelect);
+
+        utils.crEl('button', controls, {
+            class: 'chart-period-size',
+            period: 'days',
+            txt: 'Days'
+        }).addEventListener('click', _onPeriodSizeSelect);
     }
 
 
@@ -99,11 +125,11 @@ function Chart(container, options) {
         var input = utils.crEl('input', controls, {
             type: min.length > 7 ? 'date' : 'month',
             name: name,
+            class: 'chart-date',
             value: name == 'from' ? min : max,
             min: min,
             max: max
         });
-
         input.addEventListener('keyup', update);
         input.addEventListener('change', update);
         input.addEventListener('mouseup', update);
@@ -141,7 +167,6 @@ function Chart(container, options) {
 
     function calculateCanvasSize() {
         let p = params.padding,
-            pc = params.chart.padding,
             w, h;
 
         //reset for resize
@@ -199,7 +224,7 @@ function Chart(container, options) {
         pn.y = pn.padding[0];
         pn.x = pn.padding[3];
 
-        if (name == 'chart') {
+        if (pn.type === 'chart') {
             self.quantityX = pn.width;
         }
 
@@ -232,22 +257,27 @@ function Chart(container, options) {
                     continue;
                 }
                 mdl[p] = params[name][p];
+                if (mdl.type === 'chart') {
+                    mdl.quantityX = mdl.width / ((params[name].margin || 0) + (params[name].pointWidth || 1));
+                }
             }
             activeModules.push(mdl);
         });
+        console.log('activeModules',activeModules);
     }
 
 
-    function dataCompression(averaging) {
-        if (self.quantityX >= self.fullQuantityX) {
+    function dataCompression(quantity, averaging) {
+        quantity = quantity || self.quantityX;
+        if (quantity >= self.fullQuantityX) {
             return self.data;
         }
 
         let data = self.data,
             _data = [],
-            rate = self.fullQuantityX / self.quantityX;
+            rate = self.fullQuantityX / quantity;
 
-        for (let i = 0, ii = Math.min(data.length, self.quantityX); i < ii; i++) {
+        for (let i = 0, ii = Math.min(data.length, quantity); i < ii; i++) {
             let d = Math.min(Math.round(i * rate), self.fullQuantityX - 1);
 
             if (averaging) {
@@ -274,8 +304,8 @@ function Chart(container, options) {
             max = -Infinity;
 
         for (var i = _data.length - 1; i >= 0; i--) {
-            min = Math.min(min, +_data[i].v);
-            max = Math.max(max, +_data[i].v);
+            min = Math.min(min, +_data[i].l || +_data[i].v);
+            max = Math.max(max, +_data[i].h || +_data[i].v);
         }
 
         if (!_data.length) {
@@ -292,18 +322,17 @@ function Chart(container, options) {
         let _data = self.data.slice(self.positionX, self.positionX + self.quantityX),
             minMaxValues = getMinMaxValues(_data);
 
-        if (params.fitByWidth) {
-            self.rateX = Math.max(1, params.chart.width / params.pointWidth / _data.length);
-        }
-
-        if (self.dataState !== 'invisible') {
-            cleanup();
+        if (self.dataState !== 'invisible' || force) {
+            cleanupCanvas();
         }
 
         activeModules.map(function(mdl) {
-            if (force || self.dataState === 'done' || mdl.renderOn === self.dataState || !mdl.renderOn) {
+            // if (params.fitByWidth) {
+            // }
+            if ((force || self.dataState === 'done') && (!mdl.renderOn || mdl.renderOn())) {
+                self.quantityX = mdl.quantityX || self.quantityX;
                 if (mdl.fullData) {
-                    mdl.data = dataCompression(mdl.averaging);
+                    mdl.data = dataCompression(mdl.width, mdl.averaging);
                     let mmv = getMinMaxValues(mdl.data)
                     mdl.minValue = mmv.min;
                     mdl.maxValue = mmv.max;
@@ -312,13 +341,16 @@ function Chart(container, options) {
                     mdl.minValue = minMaxValues.min;
                     mdl.maxValue = minMaxValues.max;
                 }
+                // console.log('',mdl.name,mdl.width, mdl.pointWidth , mdl.data.length);
+                mdl.rateX = Math.max(1, mdl.width / (mdl.pointWidth || 1) / mdl.data.length);
+                
                 mdl.render();
             }
         });
         
     }
 
-    var cleanup = function() {
+    var cleanupCanvas = function() {
         var ctx = canvas.getContext("2d");
         ctx.save();
         ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -362,49 +394,48 @@ function Chart(container, options) {
             return;
         }
 
-        var uid = options.dataSource + Date.now(),
-            _params = {
-                id: uid,
+        var _params = {
                 url: options.dataSource,
                 quantity: self.quantityX,
                 from: self.period.from,
                 to: self.period.to,
                 store: self.store
-            }
+            },
+            cacheKey = _params.url + self.store + _params.from + _params.to,
+            cachedData = utils.cache(cacheKey);
 
 
-        self.data = [];
-        self.dataState = '';
-        renderModules(true);
+        if (cachedData) {
+            self.data = cachedData.data;
+            self.dataState = cachedData.dataState;
+            self.fullQuantityX = cachedData.data.length;
+            renderModules(true);
+            return;
+        }
+
+        var dataState = '',
+            data = [];
 
         Data.get(_params, function(_data) {
-
-            if (_data.id !== _params.id) {
-            console.log('',_data.id, _params.id);
-                // _data.stop();
-                return;
-            }
             if (_data.stream) {
-                self.data.push(_data.stream);
-            } else if (_data.all){
-                self.data = _data.all;
-                self.dataState = 'done';
-            // } else {
-            //     self.dataState = 'error';
-            //     return;
+                data.push(_data.stream);
+                dataState = self.quantityX <= data.length ? 'visible' : 'invisible';
+            } else if (_data.state === 'done' || _data.all){
+                data = _data.all || data;
+                dataState = 'done';
             }
 
-            self.fullQuantityX = self.data.length;
-            if (_data.state === 'done' || _data.all) {
-                self.dataState = 'done';
-            } else {
-                self.dataState = params.chart.width ? 'visible' : 'invisible';
-            }
-
-            if (self.dataState === 'done' || self.data.length % 100 === 0) {
-                // if (_data.store == self.store) {
+            if (dataState === 'done' || data.length % 100 === 0) {
+                utils.cache(cacheKey, {
+                    data: data,
+                    dataState: dataState
+                });
+                if (self.store === _data.store) {
+                    self.data = data;
+                    self.dataState = dataState;
+                    self.fullQuantityX = data.length;
                     requestAnimationFrame(renderModules);
-                // }
+                }
             }
         });
     }

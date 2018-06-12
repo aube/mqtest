@@ -109,6 +109,14 @@ main {
     main .chart-container .chart-controls {
       margin: .3rem 0;
       height: 2rem; }
+      main .chart-container .chart-controls .chart-date {
+        width: 8rem;
+        margin-right: .3rem; }
+      main .chart-container .chart-controls .chart-period-size {
+        margin-right: .3rem;
+        cursor: pointer; }
+        main .chart-container .chart-controls .chart-period-size.active {
+          color: red; }
     main .chart-container canvas {
       height: 100%;
       width: 100%;

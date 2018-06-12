@@ -16,7 +16,7 @@ function ChartMap(canvas, params) {
     }
 
     function _posX(value) {
-        return value * self.rateX * params.pointWidth + self.x;
+        return value * params.pointWidth + self.x;
     }
 
     /**
@@ -40,11 +40,7 @@ function ChartMap(canvas, params) {
     function getHighlitedZoneCoords() {
         let rate = self.quantityX / self.fullQuantityX,
             width = Math.max(20, rate * self.width) * self.ratio,
-            x = self.x + rate * self.positionX;
-
-        if (x + width > self.x + self.quantityX) {
-            x = Math.max(self.x, self.x + self.quantityX - width);
-        }
+            x = self.x + self.width * (self.positionX / self.fullQuantityX);
 
         return [
             x,
@@ -114,8 +110,10 @@ function ChartMap(canvas, params) {
         startX;
 
     this.click = function(x, y) {
-        if (!drag) {
-            self.moveChart(((x - self.x) / self.quantityX) * self.fullQuantityX - self.positionX - self.quantityX / 2, 200);
+        if (drag !== 'active') {
+            let shiftPercent = (x - self.x) / self.width - self.positionX / self.fullQuantityX,
+                position = self.fullQuantityX * (shiftPercent  - (self.quantityX / self.fullQuantityX) / 2);
+            self.moveChart(position);
         }
     }
 
@@ -145,7 +143,10 @@ function ChartMap(canvas, params) {
             drag = 'active';
         }
         if (drag == 'active') {
-            self.moveChart(((x - startX) / self.quantityX) * self.fullQuantityX);
+            let shiftPercent = (x - startX) / self.width,
+                position = self.fullQuantityX * shiftPercent;
+            self.moveChart(position);
+
             startX = x;
         }
     }

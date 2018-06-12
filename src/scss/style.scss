@@ -147,13 +147,17 @@ main {
         .chart-controls {
             margin: .3rem 0;
             height: $chart-controls-height;
-            input {
-                // font-size: 1rem;
-                // display: inline-block;
-                // width: 40%;
-                
+            .chart-date {
+                width: 8rem;
+                margin-right: .3rem;
             }
-        
+            .chart-period-size {
+                margin-right: .3rem;
+                cursor: pointer;
+                &.active {
+                    color: red;
+                }
+            }
         }
 
         canvas {
