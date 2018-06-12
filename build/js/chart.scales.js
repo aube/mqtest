@@ -68,7 +68,7 @@ function ChartScales(canvas, params) {
     }
 
     function lineX(value) {
-        var x = value.pos * self.rateX + self.x,
+        var x = value.pos * (self.pointWidth + self.margin) + self.x,
             y0 = self.y,
             y1 = self.chart.height + y0;
 
@@ -141,7 +141,6 @@ function ChartScales(canvas, params) {
                     i += 11;
                 }
             }
-
             ctx.beginPath();
             lines.map(function(value) {
                 lineX(value);

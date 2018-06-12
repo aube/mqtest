@@ -16,7 +16,7 @@ function ChartMap(canvas, params) {
     }
 
     function _posX(value) {
-        return value * params.pointWidth + self.x;
+        return value + self.x;
     }
 
     /**
@@ -38,9 +38,9 @@ function ChartMap(canvas, params) {
      * @return {Array} [x, y, width, height]
      */
     function getHighlitedZoneCoords() {
-        let rate = self.quantityX / self.fullQuantityX,
+        let rate = self.visiblePoints / self.allPoints,
             width = Math.max(20, rate * self.width) * self.ratio,
-            x = self.x + self.width * (self.positionX / self.fullQuantityX);
+            x = self.x + self.width * (self.positionX / self.allPoints);
 
         return [
             x,
@@ -68,14 +68,19 @@ function ChartMap(canvas, params) {
      * Line chart builder
      */
     this.render = function() {
-        let data = self.data,
-            _min = Infinity,
-            _max = -Infinity,
+        let _data = self.__proto__.data,
+            _dataCompressed = utils.dataCompression(_data, self.width, self.averaging),
+            minMaxValues = utils.getMinMaxValues(_dataCompressed),
             x, y;
 
-        if (!data.length) {
+        self.minValue = minMaxValues.min;
+        self.maxValue = minMaxValues.max;
+
+        if (!_dataCompressed.length) {
             return;
         }
+
+        self.rateX = 1;
 
         ctx.beginPath();
         ctx.lineWidth = 1;
@@ -86,16 +91,16 @@ function ChartMap(canvas, params) {
         }
 
         if (self.dataState !== 'done') {
-            displayLoadingText('Loading: ' + data.slice(-1)[0].t);
+            displayLoadingText('Loading: ' + _dataCompressed.slice(-1)[0].t);
             return;
         } else {
             hightlightVisibleZone();
             ctx.strokeStyle = self.lineColor;
-            y = _posY(data[0].v);
+            y = _posY(_dataCompressed[0].v);
             x = _posX(0);
             ctx.moveTo(x, y);
-            for (var i = 1; i < data.length; i++) {
-                y = _posY(data[i].v);
+            for (var i = 1; i < _dataCompressed.length; i++) {
+                y = _posY(_dataCompressed[i].v);
                 x = _posX(i);
                 ctx.lineTo(x, y);
             }
@@ -111,8 +116,8 @@ function ChartMap(canvas, params) {
 
     this.click = function(x, y) {
         if (drag !== 'active') {
-            let shiftPercent = (x - self.x) / self.width - self.positionX / self.fullQuantityX,
-                position = self.fullQuantityX * (shiftPercent  - (self.quantityX / self.fullQuantityX) / 2);
+            let shiftPercent = (x - self.x) / self.width - self.positionX / self.allPoints,
+                position = self.allPoints * (shiftPercent  - (self.visiblePoints / self.allPoints) / 2);
             self.moveChart(position);
         }
     }
@@ -144,7 +149,7 @@ function ChartMap(canvas, params) {
         }
         if (drag == 'active') {
             let shiftPercent = (x - startX) / self.width,
-                position = self.fullQuantityX * shiftPercent;
+                position = self.allPoints * shiftPercent;
             self.moveChart(position);
 
             startX = x;

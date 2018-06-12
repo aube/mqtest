@@ -179,6 +179,56 @@ utils = {
         return function(txt) {
             el.innerText = txt || '';
         }
-    })()
+    })(),
+
+
+    dataCompression: function(data, quantity, averaging) {
+        if (quantity >= data.length) {
+            return data;
+        }
+
+        let _data = [],
+            step = data.length / quantity;
+
+        for (let i = 0, ii = Math.min(data.length, quantity); i < ii; i++) {
+            let d = Math.min(Math.round(i * step), data.length - 1);
+
+            if (averaging) {
+                let avr = 0,
+                    dd = Math.min(Math.round((i + 1) * step), data.length - 1);
+
+                for (let a = d; a <= dd; a++) {
+                    avr += +(data[a] || {}).v;
+                }
+
+                _data.push({
+                    t: data[d].t,
+                    v: avr / Math.max(1, dd - d)
+                });
+            } else {
+                _data.push(data[d] || {v: 0});
+            }
+        }
+        return _data;
+    },
+
+    getMinMaxValues: function(_data) {
+        let min = Infinity,
+            max = -Infinity;
+
+        for (var i = _data.length - 1; i >= 0; i--) {
+            min = Math.min(min, +_data[i].l || +_data[i].v);
+            max = Math.max(max, +_data[i].h || +_data[i].v);
+        }
+
+        if (!_data.length) {
+            return {min: -1, max: 1};
+        }
+
+        return {
+            min: min,
+            max: max
+        }
+    }
 
 }

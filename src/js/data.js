@@ -165,7 +165,7 @@ window.Data = {
      */
     getMinMaxDates: function(cb) {
         // cb('1881-01-01', '1882-12-31');
-        cb('1881-01-01', '2006-12-31');
+        cb('1881', '2006');
     },
 
     /**
@@ -188,7 +188,7 @@ window.Data = {
                 return;
             }
 
-            utils.state('Read IndexedDB data');
+            utils.state('Reading IndexedDB data');
             console.time('iDB data select');
 
             // //select benchmark w/o callbacks and render
@@ -198,7 +198,6 @@ window.Data = {
             //     });
 
             activeQueries[qKey] = true;
-
 
             Data.iDBs(dbName, storeName)
                 .select(params, cb, function(data) {
@@ -317,13 +316,13 @@ var IDB = function(dbName, storeName) {
             objectStore = transaction.objectStore(storeName),
             dataWasSended = false,
             counter = 0;
-
+console.log('params.from && params.to',params.from, params.to);
         if (params.from && params.to) {
             keyRangeValue = IDBKeyRange.bound(params.from, params.to, false, false)
         } else if (params.from) {
-            keyRangeValue = IDBKeyRange.lowerBound(params.from);
+            keyRangeValue = IDBKeyRange.lowerBound(params.from, false);
         } else if (params.to) {
-            keyRangeValue = IDBKeyRange.upperBound(params.to);
+            keyRangeValue = IDBKeyRange.upperBound(params.to, false);
         }
 
         objectStore.openCursor(keyRangeValue).onsuccess = function(event) {

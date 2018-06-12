@@ -15,19 +15,31 @@ function ChartLine(canvas, params) {
     }
 
     function _posX(value) {
-        return value * self.rateX * params.pointWidth + self.x;
+        return value * self.rateX * self.pointWidth + self.x + value * 1;
     }
 
     /**
      * Line chart builder
      */
-    this.render = function() {
+    this.render = function(force) {
         var data = self.data,
             x, y;
 
+        if (!self.active) {
+            return;
+        }
         if (!data.length) {
             return;
         }
+        if (!force && !~['visible', 'done'].indexOf(self.dataState)) {
+            return;
+        }
+
+        self.visiblePoints = self.width / (self.pointWidth  + self.margin);
+        self.rateX = Math.max(1, self.visiblePoints / self.allPoints);
+        self.__proto__.pointWidth = self.pointWidth;
+        self.__proto__.margin = self.margin;
+        self.__proto__.visiblePoints = self.visiblePoints;
 
         ctx.beginPath();
         ctx.lineWidth = 1;

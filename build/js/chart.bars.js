@@ -21,19 +21,27 @@ function ChartBars(canvas, params) {
     /**
      * Line chart builder
      */
-    this.render = function() {
+    this.render = function(force) {
         var data = self.data,
             x, y;
 
+        if (!self.active) {
+            return;
+        }
         if (!data.length) {
             return;
         }
+        if (!force && !~['visible', 'done'].indexOf(self.dataState)) {
+            return;
+        }
 
+        self.visiblePoints = self.width / (self.pointWidth  + self.margin);
+        self.rateX = Math.max(1, self.visiblePoints / self.allPoints);
+        self.__proto__.pointWidth = self.pointWidth;
+        self.__proto__.margin = self.margin;
+        self.__proto__.visiblePoints = self.visiblePoints;
 
         ctx.beginPath();
-        // ctx.lineWidth = 1;
-        // ctx.lineJoin = 'round';
-
         if (self.borderColor) {
             ctx.strokeStyle = self.borderColor;
             ctx.strokeRect(self.x, self.y, self.width, self.height);

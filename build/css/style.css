@@ -107,15 +107,14 @@ main {
       opacity: 0;
       display: block; }
     main .chart-container .chart-controls {
-      margin: .3rem 0;
-      height: 2rem; }
+      margin: .3rem 0; }
       main .chart-container .chart-controls .chart-date {
-        width: 8rem;
+        width: 4rem;
         margin-right: .3rem; }
-      main .chart-container .chart-controls .chart-period-size {
+      main .chart-container .chart-controls .chart-module-button {
         margin-right: .3rem;
         cursor: pointer; }
-        main .chart-container .chart-controls .chart-period-size.active {
+        main .chart-container .chart-controls .chart-module-button.active {
           color: red; }
     main .chart-container canvas {
       height: 100%;

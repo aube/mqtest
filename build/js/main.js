@@ -9,11 +9,11 @@
             dataSource: '/precipitation.json',
             title: 'Осадки',
             type: 'chart'
-        }, {
-            id: 'description',
-            dataSource: '/description.html',
-            title: 'Описание',
-            type: 'html'
+        // }, {
+        //     id: 'description',
+        //     dataSource: '/description.html',
+        //     title: 'Описание',
+        //     type: 'html'
         }];
 
 
@@ -95,46 +95,12 @@
 
     function init() {
 
-        // period.start.init(hash[1] || MIN_YEAR);
-        // period.end.init(hash[2] || MAX_YEAR);
-
         Pages.map(function(page) {
 
             var tab = tabs.create(page);
-
 
         });
 
         tabs.setActive(hash.page || Pages[0].id);
     }
 
-
-
-
-            // chart.ctrl = new Chart(chart.canvas);
-            // chart.rect = chart.canvas.getBoundingClientRect();
-
-            // if (activeChart === chart.id) {
-            //     chart.active = true;
-            //     // setActiveChart.call(chart);
-            // }
-
-            // chart.canvas.onmousemove = function(e) {
-            //     // important: correct mouse position:
-            //     var x = e.clientX - chart.ctrl.rect.left,
-            //         y = e.clientY - chart.ctrl.rect.top;
-
-            //     let res = chart.ctrl.getByPoint(x, y);
-            //     // console.log('res',res);
-            //     // ctx.clearRect(0, 0, canvas.width, canvas.height); // for demo
-
-            //     // while(r = rects[i++]) {
-            //     //     // add a single rect to path:
-            //     //     ctx.beginPath();
-            //     //     ctx.rect(r.x, r.y, r.w, r.h);
-                    
-            //     //     // check if we hover it, fill red, if not fill it blue
-            //     //     ctx.fillStyle = ctx.isPointInPath(x, y) ? "red" : "blue";
-            //     //     ctx.fill();
-            //     // }
-            // };

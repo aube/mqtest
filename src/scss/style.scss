@@ -146,12 +146,12 @@ main {
 
         .chart-controls {
             margin: .3rem 0;
-            height: $chart-controls-height;
+            // height: $chart-controls-height;
             .chart-date {
-                width: 8rem;
+                width: 4rem;
                 margin-right: .3rem;
             }
-            .chart-period-size {
+            .chart-module-button {
                 margin-right: .3rem;
                 cursor: pointer;
                 &.active {
