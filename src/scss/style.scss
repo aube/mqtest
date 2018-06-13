@@ -43,7 +43,6 @@ body {
     height: calc(100vh - #{$header-height});
     align-items: stretch;
     display: flex;
-    // background-color: orange;
     margin:0;
     padding:0;
     @include mq('sm', 'max') {

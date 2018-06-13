@@ -1,6 +1,6 @@
 /**
  * ChartMap module for Chart
- * Displaying data map bottom (usually) of canvas
+ * Displaying data map on canvas
  * can be used like scrollbar
  */
 function ChartMap(canvas, params) {
@@ -68,7 +68,7 @@ function ChartMap(canvas, params) {
      * Line chart builder
      */
     this.render = function() {
-        let _data = self.__proto__.data,
+        let _data = self.dataSliced || self.__proto__.data,
             _dataCompressed = utils.dataCompression(_data, self.width, self.averaging),
             minMaxValues = utils.getMinMaxValues(_dataCompressed),
             x, y;

@@ -1,5 +1,4 @@
-
-utils = {
+window.utils = {
     crEl: function(name, container, attributes) {
         if (typeof container === 'string') {
             container = document.querySelector(container);
@@ -85,7 +84,15 @@ utils = {
         var days = (d0[0] - d1[0]) * 365.242199 + 
             (d0[1] - d1[1]) * 30.4368499 + 
             (d0[2] - d1[2]);
-        return Math.round(days);
+        return Math.abs(Math.round(days));
+    },
+
+    monthsBetween: function(m0, m1) {
+        m0 = m0.split('-');
+        m1 = m1.split('-');
+        var ms = (m0[0] - m1[0]) * 12 + 
+            (m1[1] - m1[1]);
+        return Math.abs(Math.round(ms));
     },
 
     daysInMonth: function(dateString) {

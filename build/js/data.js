@@ -109,55 +109,6 @@ window.Data = {
         }, 100);
     },
 
-    /**
-     * Select period from full data array
-     *
-     * @param {Array} data
-     * @param {String} fromDate
-     * @param {String} toDate
-     * @returns {Array}
-     */
-    select: function(data, fromDate, toDate) {
-
-        if (!fromDate || !toDate) {
-            console.error('Slice data period error');
-            return data;
-        }
-
-        var min = data[0].t,
-            max = data[data.length - 1].t,
-            sliceFrom = Math.max(0, utils.daysBetween(fromDate, min)),
-            sliceTo = fromDate + utils.daysBetween(toDate, fromDate);
-
-
-        // while (data[sliceFrom].t && from != data[sliceFrom].t) {
-        //     sliceFrom += from > data[sliceFrom].t ? 1 : -1;
-        // }
-        // while (data[sliceTo - 1].t && to != data[sliceTo - 1].t) {
-        //     sliceTo += to > data[sliceTo - 1].t ? 1 : -1;
-        // }
-
-        return data.slice(sliceFrom, sliceTo);
-    },
-
-    getSliceData: function(data, params) {
-
-        var min = data[0].t,
-            max = data.slice(-1)[0].t,
-            sliceFrom = Math.max(0, utils.daysBetween(params.from, min)),
-            sliceTo = from + (params.quantity || utils.daysBetween(to, from));
-
-        while (data[sliceFrom].t && from != data[sliceFrom].t) {
-            sliceFrom += from > data[sliceFrom].t ? 1 : -1;
-        }
-
-        // while (data[sliceTo - 1].t && to != data[sliceTo - 1].t) {
-        //     sliceTo += to > data[sliceTo - 1].t ? 1 : -1;
-        // }
-
-        return data.slice(sliceFrom, sliceTo);
-    },
-
 
     /**
      * Get data period from server and pass it to callback
@@ -316,7 +267,7 @@ var IDB = function(dbName, storeName) {
             objectStore = transaction.objectStore(storeName),
             dataWasSended = false,
             counter = 0;
-console.log('params.from && params.to',params.from, params.to);
+
         if (params.from && params.to) {
             keyRangeValue = IDBKeyRange.bound(params.from, params.to, false, false)
         } else if (params.from) {

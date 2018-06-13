@@ -1,6 +1,6 @@
 /**
  * ChartLine module for Chart
- * 
+ * Displaying data graph in line
  */
 function ChartLine(canvas, params) {
 
@@ -35,11 +35,9 @@ function ChartLine(canvas, params) {
             return;
         }
 
-        self.visiblePoints = self.width / (self.pointWidth  + self.margin);
-        self.rateX = Math.max(1, self.visiblePoints / self.allPoints);
-        self.__proto__.pointWidth = self.pointWidth;
-        self.__proto__.margin = self.margin;
-        self.__proto__.visiblePoints = self.visiblePoints;
+        if (self.allPoints !== data.length) {
+            self.updateParams();
+        }
 
         ctx.beginPath();
         ctx.lineWidth = 1;
@@ -60,6 +58,14 @@ function ChartLine(canvas, params) {
             ctx.lineTo(x, y);
         }
         ctx.stroke();
+    }
+
+    this.updateParams = function() {
+        self.visiblePoints = self.width / (self.pointWidth  + self.margin);
+        self.rateX = Math.max(1, self.visiblePoints / self.allPoints);
+        self.__proto__.pointWidth = self.pointWidth;
+        self.__proto__.margin = self.margin;
+        self.__proto__.visiblePoints = self.visiblePoints;
     }
 
     /**

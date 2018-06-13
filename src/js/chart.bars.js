@@ -1,6 +1,6 @@
 /**
- * ChartLine module for Chart
- * 
+ * ChartBars module for Chart
+ * Displaying data graph in bars
  */
 function ChartBars(canvas, params) {
 
@@ -35,11 +35,9 @@ function ChartBars(canvas, params) {
             return;
         }
 
-        self.visiblePoints = self.width / (self.pointWidth  + self.margin);
-        self.rateX = Math.max(1, self.visiblePoints / self.allPoints);
-        self.__proto__.pointWidth = self.pointWidth;
-        self.__proto__.margin = self.margin;
-        self.__proto__.visiblePoints = self.visiblePoints;
+        if (self.allPoints !== data.length) {
+            self.updateParams();
+        }
 
         ctx.beginPath();
         if (self.borderColor) {
@@ -59,6 +57,14 @@ function ChartBars(canvas, params) {
             );
         }
         ctx.stroke();
+    }
+
+    this.updateParams = function() {
+        self.visiblePoints = self.width / (self.pointWidth  + self.margin);
+        self.rateX = Math.max(1, self.visiblePoints / self.allPoints);
+        self.__proto__.pointWidth = self.pointWidth;
+        self.__proto__.margin = self.margin;
+        self.__proto__.visiblePoints = self.visiblePoints;
     }
 
     /**

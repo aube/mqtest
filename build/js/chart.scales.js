@@ -1,14 +1,6 @@
 /**
- * Splits given string into chunks of given length
- * & joins them with a given separator string.
- *
- * @example
- * getSplittedString("abcdefghi") = "abc-def-ghi"
- *
- * @param {String} str
- * @param {Number} [chunkLen=3]
- * @param {String} [sep='-']
- * @returns {String}
+ * ChartScales module for Chart
+ * Scales for chart module
  */
 function ChartScales(canvas, params) {
 
@@ -124,8 +116,8 @@ function ChartScales(canvas, params) {
 
             for (var i = 0; i < self.data.length; i++) {
                 let d = self.data[i].t,
-                    matchDays = d.match(/(\d{4})-(\d\d)-01/),
-                    matchMonths = d.match(/(\d{4})-01/);
+                    matchDays = d.match(/(\d{4})-(\d\d)-01$/),
+                    matchMonths = d.match(/(\d{4})-01$/);
                 if (matchDays) {
                     lines.push({
                         pos: i,
@@ -144,34 +136,9 @@ function ChartScales(canvas, params) {
             ctx.beginPath();
             lines.map(function(value) {
                 lineX(value);
-            })
+            });
             ctx.stroke();
         }
-
-
-        
-        // var data = this.data.array,
-        //     x, y;
-
-        // if (!data.length) {
-        //     return;
-        // }
-        // ctx.fillRect(self.x;
-        // ctx.beginPath();
-
-
-        // this.cleanup();
-
-        // y = posY(data[0].v);
-        // x = posX(0);
-        // ctx.moveTo(x, y);
-        // for (var i = 1; i < data.length; i++) {
-        //     y = posY(data[i].v);
-        //     x = posX(i);
-        //     ctx.lineTo(x, y);
-        // }
-        // ctx.stroke();
-        // self.dataUpdated = false;
     }
 
 

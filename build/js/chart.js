@@ -1,6 +1,9 @@
-
-
-
+/**
+ * Main Chart module
+ * 
+ * @param {HTMLelement} container
+ * @param {Object} options
+ */
 function Chart(container, options) {
 
     var self = this;
@@ -22,8 +25,7 @@ function Chart(container, options) {
             height: 0,
             minDate: 0,
             maxDate: 3000,
-            padding: [10, 2, 10, 50], //top, right, bottom, left
-            fitByWidth: true,
+            padding: [10, 2, 10, 50], //top, right, bottom, left in pixels
             pointWidth: 1,
             scales: {
                 fn: ChartScales,
@@ -37,8 +39,11 @@ function Chart(container, options) {
             },
             months: {
                 fn: ChartBars,
+                fitByWidth: true,
                 type: 'chart',
-                rect: [0, 0, .2, 0],
+                store: 'months',
+                active: true,
+                rect: [0, 0, .2, 0], //top, right, bottom, left (pixels > 1 >= percents)
                 pointWidth: 7,
                 margin: 1,
                 borderColor: '#ccc',
@@ -46,8 +51,8 @@ function Chart(container, options) {
             },
             days: {
                 fn: ChartLine,
-                active: true,
                 type: 'chart',
+                store: 'days',
                 rect: [0, 0, .2, 0],
                 pointWidth: 1,
                 margin: 0,
@@ -57,7 +62,7 @@ function Chart(container, options) {
             map: {
                 fn: ChartMap,
                 rect: [.85, 0, 0, 0],
-                fullData: true,
+                fitByWidth: true,
                 averaging: true,
                 lineColor: '#666',
                 borderColor: '#ccc',
@@ -69,12 +74,11 @@ function Chart(container, options) {
         canvas,
         connectedModules;
 
-
     /**
      * Cleanup all canvas
      */
     function _renderAllModules(force) {
-        let _data = self.data.slice(self.positionX, self.positionX + self.visiblePoints),
+        let _data = (self.dataSliced || self.data).slice(self.positionX, self.positionX + self.visiblePoints),
             minMaxValues = utils.getMinMaxValues(_data);
 
         self.minValue = minMaxValues.min;
@@ -146,16 +150,58 @@ function Chart(container, options) {
     self.moveChart = moveChart;
 
 
-    function _dataUpdate() {
-        if (self.period.from > self.period.to) {
+    /**
+     * Slice current data by selected period
+     * Write result into self.dataSliced
+     */
+    function _dataUpdateOnPeriodChange() {
+        if (+self.period.from > +self.period.to) {
             return;
         }
+        if (self.period.from == self.minDate &&
+            self.period.to == self.maxDate) {
+            self.dataSliced = false;
+        } else {
+            let from, to, shift0, shift1;
 
+            if (self.store === 'days') {
+                from = self.period.from + '-01-01',
+                to = self.period.to + '-12-31',
+                shift0 = utils.daysBetween(self.minDate + '-01-01', from),
+                shift1 = self.data.length - utils.daysBetween(self.maxDate + '-12-31', to) - 1;
+            } else {
+                from = self.period.from + '-01',
+                to = self.period.to + '-12',
+                shift0 = utils.monthsBetween(self.minDate + '-01-01', from),
+                shift1 = self.data.length - utils.monthsBetween(self.maxDate + '-12-31', to) - 1;
+            }
+
+            while (self.data[shift0].t && from != self.data[shift0].t) {
+                shift0 += from > self.data[shift0].t ? 1 : -1;
+                // break;
+            }
+            while (self.data[shift1].t && to != self.data[shift1].t) {
+                shift1 += to > self.data[shift1].t ? 1 : -1;
+                // break;
+            }
+            self.dataSliced = self.data.slice(shift0, shift1);
+        }
+        self.positionX = 0;
+        
+        _renderAllModules(true);
+    }
+
+
+    /**
+     * Getting from Data.js
+     * Write result into self.data
+     */
+    function _getData() {
         var _params = {
                 url: options.dataSource,
                 quantity: self.visiblePoints,
-                from: self.period.from + '-01' + (self.store === 'days' ? '-01' : ''),
-                to: self.period.to + '-12' + (self.store === 'days' ? '-31' : ''),
+                from: self.minDate + '-01' + (self.store === 'days' ? '-01' : ''),
+                to: self.maxDate + '-12' + (self.store === 'days' ? '-31' : ''),
                 store: self.store
             },
             cacheKey = _params.url + self.store + _params.from + _params.to,
@@ -165,7 +211,7 @@ function Chart(container, options) {
             self.data = cachedData.data;
             self.dataState = cachedData.dataState;
             self.allPoints = cachedData.data.length;
-            _renderAllModules(true);
+            _dataUpdateOnPeriodChange();
             return;
         }
 
@@ -180,6 +226,8 @@ function Chart(container, options) {
             } else if (_data.state === 'done' || _data.all){
                 data = _data.all || data;
                 dataState = 'done';
+                self.data = data;
+                _dataUpdateOnPeriodChange();
             }
 
             if (dataState === 'done' || data.length % 100 === 0) {
@@ -197,10 +245,22 @@ function Chart(container, options) {
         });
     }
 
+
+    /**
+     * Select chart module bars or lines (month or days)
+     */
     function _onChartModuleActivation(name) {
-        self.store = name;
-        
-        _dataUpdate();
+        if (!connectedModules) return
+        connectedModules.map(function(mdl) {
+            if (mdl.name === name) {
+                self.store = mdl.store;
+                mdl.active = true;
+                mdl.updateParams();
+            } else if (mdl.active) {
+                mdl.active = false;
+            }
+        });
+        _getData();
     }
 
 
@@ -215,7 +275,7 @@ function Chart(container, options) {
         setTimeout(function() {
             _calculateCanvasSize();
             _addModules();
-            // _dataUpdate();
+            _getData();
             Object.setPrototypeOf(new ChartEvents(canvas, connectedModules), self);
 
             //TODO: add checkup canvas visiblility:
@@ -232,13 +292,16 @@ function Chart(container, options) {
 
 
         function _addControls(minDate, maxDate) {
+            self.minDate = minDate;
+            self.maxDate = maxDate;
+
             controls = utils.crEl('div', container, {class: 'chart-controls'});
             canvas = utils.crEl('canvas', container, {class: 'chart'});
             new Input('from', minDate, maxDate);
             new Input('to', minDate, maxDate);
 
             function _chartModuleActivation(e) {
-                let mdl = this.getAttribute('chart-module');
+                let name = this.getAttribute('chart-module');
 
                 if (e && this.classList.contains('active')) {
                     return;
@@ -246,7 +309,7 @@ function Chart(container, options) {
 
                 controls.querySelector('.chart-module-button.active').classList.remove('active');
                 this.classList.add('active');
-                _onChartModuleActivation(mdl);
+                _onChartModuleActivation(name);
             }
 
             _getAllModulesFromParams('chart').map(function(name) {
@@ -256,9 +319,6 @@ function Chart(container, options) {
                     txt: name
                 });
                 btn.addEventListener('click', _chartModuleActivation);
-                if (params[name].active) {
-                    _chartModuleActivation.call(btn);
-                }
             })
         }
 
@@ -284,7 +344,7 @@ function Chart(container, options) {
                 self.period[name] = input.value;
                 hash[name] = input.value;
                 hash.update();
-                // _dataUpdate();
+                _dataUpdateOnPeriodChange();
             }
 
             return {
@@ -351,7 +411,7 @@ function Chart(container, options) {
                     continue;
                 }
 
-                if (+pn.rect[pos] >= 1) {
+                if (+pn.rect[pos] > 1) {
                     pn.padding[pos] = +pn.rect[pos];
                 //percents:
                 } else if (pos % 2 === 0) {
@@ -404,6 +464,9 @@ function Chart(container, options) {
                     mdl[p] = params[name][p];
                 }
                 connectedModules.push(mdl);
+                if (mdl.active) {
+                    _onChartModuleActivation(name);
+                }
             });
         }
 
