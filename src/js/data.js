@@ -170,7 +170,12 @@ window.Data = {
 
                         Data.saveDataLocal(data.all, dbName);
 
-                        cb(data);
+                        cb({
+                            id: params.id,
+                            store: params.store,
+                            state: 'done',
+                            all: data.all
+                        });
 
                         // // Using Worker slowly then partial data save:
                         // saveDataLocalWishWorker(data, dbName, storeName);

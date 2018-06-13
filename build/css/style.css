@@ -107,7 +107,8 @@ main {
       opacity: 0;
       display: block; }
     main .chart-container .chart-controls {
-      margin: .3rem 0; }
+      margin: .3rem 0;
+      height: 2rem; }
       main .chart-container .chart-controls .chart-date {
         width: 4rem;
         margin-right: .3rem; }
