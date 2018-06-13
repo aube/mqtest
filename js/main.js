@@ -1,12 +1,12 @@
 
     var Pages = [{
             id: 'temperature',
-            dataSource: './temperature.json',
+            dataSource: '/temperature.json',
             title: 'Температура',
             type: 'chart'
         }, {
             id: 'precipitation',
-            dataSource: './precipitation.json',
+            dataSource: '/precipitation.json',
             title: 'Осадки',
             type: 'chart'
         // }, {

@@ -42,7 +42,6 @@ function Chart(container, options) {
                 fitByWidth: true,
                 type: 'chart',
                 store: 'months',
-                active: true,
                 rect: [0, 0, .2, 0], //top, right, bottom, left (pixels > 1 >= percents)
                 pointWidth: 7,
                 margin: 1,
@@ -52,6 +51,7 @@ function Chart(container, options) {
             days: {
                 fn: ChartLine,
                 type: 'chart',
+                active: true,
                 store: 'days',
                 rect: [0, 0, .2, 0],
                 pointWidth: 1,
